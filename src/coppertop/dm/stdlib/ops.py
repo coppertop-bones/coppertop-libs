@@ -10,13 +10,11 @@
 import sys
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
-
-
 from coppertop.pipe import *
-from coppertop.dm.core.types import litint, litnum, num, count as tCount, err, T, T1, T2, index, txt, btype, pytype
 from bones.core.errors import NotYetImplemented
 from bones.ts.metatypes import BType, BTUnion
-
+_snap = dir()
+from coppertop.dm.core.types import litint, litnum, num, count as tCount, err, T, T1, T2, index, txt, btype, pytype
 
 
 # **********************************************************************************************************************
@@ -61,7 +59,7 @@ def _add(a:tCount, b:tCount) -> tCount:
 # **********************************************************************************************************************
 
 @coppertop(style=binary, name='-')
-def sub(a:index, b:index) -> index:
+def _sub(a:index, b:index) -> index:
     return a - b
 
 @coppertop(style=binary, name='-')
@@ -197,3 +195,6 @@ def lt(a:num, b:num) -> bool:
 def le(a:btype, b:btype) -> bool:
     return fitsWithin(a, b)
 
+# PEP 8: _single_leading_underscore: weak "internal use" indicator. E.g. from M import * does not import objects whose
+# name starts with an underscore.
+__all__ = [n for n in dir() if n not in _snap and n != '_snap']

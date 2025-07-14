@@ -11,8 +11,8 @@ import builtins
 
 from coppertop.pipe import *
 from bones.lang.types import _tv
+_snap = dir()
 from coppertop.dm.core.types import num, index, txt, bool, litint, litnum, littxt, T1, T2, N, t
-
 
 true = _tv(bool, True)
 false = _tv(bool, False)
@@ -75,3 +75,9 @@ def PP(x:index) -> index:
 @coppertop(style=binary)
 def arrayJoin(a:N**T1, b:N**T1) -> N**T1:
     return a + b
+
+# PEP 8: _single_leading_underscore: weak "internal use" indicator. E.g. from M import * does not import objects whose
+# name starts with an underscore.
+__all__ = [n for n in dir() if n not in _snap and n != '_snap']
+# OPEN: do this instead
+# __all__ = collectAllJFuncsAndBTypes(except=[stuff from coppertop pip etc])

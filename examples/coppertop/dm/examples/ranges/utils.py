@@ -15,7 +15,7 @@ from coppertop.pipe import *
 from bones.ts.metatypes import BTUnion
 from bones.core.errors import NotYetImplemented
 from coppertop.dm.core.types import pylist
-from coppertop.dm.examples.ranges.agents import EachFR, UntilFR, ChunkUsingSubRangeGeneratorFR, ChunkFROnChangeOf, \
+from coppertop.dm.examples.ranges.agents import MapFR, UntilFR, ChunkUsingSubRangeGeneratorFR, ChunkFROnChangeOf, \
     EMPTY, IInputRange, IRandomAccessInfinite, TakeFR
 from coppertop.dm.core.types import pytuple
 
@@ -34,7 +34,7 @@ def rDropBack(r, n):
 
 @coppertop(style=binary)
 def rEach(x, y):
-    return EachFR(x, y)
+    return MapFR(x, y)
 
 @coppertop
 def rFilter(r, f):

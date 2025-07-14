@@ -83,9 +83,9 @@
 # week >> rEach >> dateAsDayString >> rMaterialise
 # week >> rEach >> dateAsDayString >> to >> pylist
 
-# rEach creates a EachFR
+# rEach creates a MapFR
 # @coppertop(style=binary)
-# def to(r:EachFR+FR, y:pylist):   << problem with the dispatch here since metric is currently average distance
+# def to(r:MapFR+FR, y:pylist):   << problem with the dispatch here since metric is currently average distance
 
 # but in this example we want to sink to stdout not create a list. In general we have inputs, outputs and control
 # Python hides all the control by doing what is necessary to get the next result however out 3 month process is a
@@ -123,7 +123,7 @@ from coppertop.dm.testing import check, equals
 from coppertop.dm.pp import PP
 from coppertop.dm.wip import wrapInList
 
-from coppertop.dm.examples.ranges.agents import IForwardRange, ListOR, RaggedZipIR, FnAdapterFR, ChainAsSingleFR, \
+from coppertop.dm.examples.ranges.agents import IForwardRange, ListOR, RaggedZipIR, FnAdapterFR, ChainFR, \
     IndexableFR
 from coppertop.dm.examples.ranges.utils import rChunkUsingSubRangeGeneratorFR, rChunkFROnChangeOf, rGetIRIter, \
     rPushAllTo, EMPTY, rEach, rUntil, rReplaceWith, rMaterialise, rFront, rTake
@@ -196,7 +196,7 @@ def monthLines(monthDays):
     return [
         monthDays.front.month >> monthTitle(_, 21) >> wrapInList >> to >> IndexableFR,
         monthDays >> weekChunks >> to >> WeekStringsFR
-    ] >> to >> ChainAsSingleFR
+    ] >> to >> ChainFR
 
 @coppertop
 def monthStringsToCalendarRow(strings, blank, sep):
@@ -306,7 +306,7 @@ def test_oneMonthsOutput():
             >> rFront
             >> weekChunks
             >> to >> WeekStringsFR
-    ] >> to >> ChainAsSingleFR \
+    ] >> to >> ChainFR \
         >> rMaterialise >> check >> equals >> Jan2020TitleAndDateLines
 
     # equivalently

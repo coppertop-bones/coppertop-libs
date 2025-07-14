@@ -134,26 +134,26 @@ class IOutputRange(IRange):
 
 class ChunkFROnChangeOf(IForwardRange):
     # chunks the input range on change of a function applied to the front element
-    def __init__(self, r, f):
+    def __init__(self, r, fn):
         assert isinstance(r, IForwardRange)
         self.r = r
-        self.f = f
-        self.lastF = None if self.r.empty else self.f(self.r.front)
+        self.fn = fn
+        self.lastF = None if self.r.empty else self.fn(self.r.front)
     @property
     def empty(self):
         return self.r.empty
     @property
     def front(self):
         assert not self.r.empty
-        return ChunkFR(self.r, self.f, self.lastF)
+        return ChunkFR(self.r, self.fn, self.lastF)
     def popFront(self):
         assert not self.r.empty
-        while not self.r.empty and self.f(self.r.front) == self.lastF:
+        while not self.r.empty and self.fn(self.r.front) == self.lastF:
             self.r.popFront()
         if not self.r.empty:
-            self.lastF = self.f(self.r.front)
+            self.lastF = self.fn(self.r.front)
     def save(self):
-        return ChunkFROnChangeOf(self.r.save(), self.f)
+        return ChunkFROnChangeOf(self.r.save(), self.fn)
     def __repr__(self):
         return 'ChunkFROnChangeOf(%s,%s)' % (self.r, self.curF)
 
@@ -179,7 +179,7 @@ class ChunkFR(IForwardRange):
         return 'ChunkFR(%s)' % self.curF
 
 
-class ChainAsSingleFR(IForwardRange):
+class ChainFR(IForwardRange):
     def __init__(self, listOfRanges):
         self.rOfR = listOfRanges >> to >> IndexableFR
         if self.rOfR.empty:
@@ -221,27 +221,6 @@ class ChunkUsingSubRangeGeneratorFR(IForwardRange):
         new = ChunkUsingSubRangeGeneratorFR(self.r.save(), self.f)
         new.curSR = None if self.curSR is None else self.curSR.save()
         return new
-
-
-class EachFR(IForwardRange):
-    def __init__(self, r, fn):
-        if isinstance(r, IInputRange):
-            self.r = r
-        else:
-            self.r = IndexableFR(r)
-        if not callable(fn):
-            raise TypeError("RMAP.__init__ fn should be a function but got a %s" % type(fn))
-        self.f = fn
-    @property
-    def empty(self):
-        return self.r.empty
-    @property
-    def front(self):
-        return self.f(self.r.front)
-    def popFront(self):
-        self.r.popFront()
-    def save(self):
-        return EachFR(self.r.save(), self.f)
 
 
 class FileLineIR(IInputRange):
@@ -311,6 +290,27 @@ class ListOR(IOutputRange):
         self.list = list
     def put(self, value):
         self.list.append(value)
+
+
+class MapFR(IForwardRange):
+    def __init__(self, r, fn):
+        if isinstance(r, IInputRange):
+            self.r = r
+        else:
+            self.r = IndexableFR(r)
+        if not callable(fn):
+            raise TypeError("RMAP.__init__ fn should be a function but got a %s" % type(fn))
+        self.f = fn
+    @property
+    def empty(self):
+        return self.r.empty
+    @property
+    def front(self):
+        return self.f(self.r.front)
+    def popFront(self):
+        self.r.popFront()
+    def save(self):
+        return MapFR(self.r.save(), self.f)
 
 
 class RaggedZipIR(IInputRange):

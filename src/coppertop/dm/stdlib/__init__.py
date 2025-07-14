@@ -7,10 +7,9 @@
 # License. See the NOTICE file distributed with this work for additional information regarding copyright ownership.
 # **********************************************************************************************************************
 
-# load the modules
 from coppertop.dm.stdlib.core import *
 from coppertop.dm.stdlib.ops import *
 
-# get the functions (with overloads) into this module
-from coppertop.dm.stdlib.core import *
-from coppertop.dm.stdlib.ops import *
+# PEP 8: _single_leading_underscore: weak "internal use" indicator. E.g. from M import * does not import objects whose
+# name starts with an underscore.
+__all__ = list(dir())
