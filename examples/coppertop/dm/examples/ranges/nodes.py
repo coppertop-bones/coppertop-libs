@@ -14,9 +14,9 @@ import sys
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 from coppertop.pipe import *
-from bones.core.sentinels import Null
+from bones.core.sentinels import Null, Missing
 from coppertop.dm.core import to
-from coppertop.dm.core.types import pylist, bool, index, T
+from coppertop.dm.core.types import pylist, bool, index, T, T1, T2
 
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__ + ' - imports done')
 
@@ -39,7 +39,7 @@ class IRange: pass
 # Interfaces
 # **********************************************************************************************************************
 
-class IInputRange(IRange):
+class IFwd(IRange):
     # a range that implements empty, front, and popFront
 
     @property
@@ -67,13 +67,13 @@ class IInputRange(IRange):
         return answer
 
 
-class IForwardRange(IInputRange):
-    # an input range that implements save in addition to empty, front and popFront
-    def save(self):
+class ISnap(IFwd):
+    # an input range that implements checkpoint in addition to empty, front and popFront
+    def snap(self):
         raise NotImplementedError()
 
 
-class IBidirectionalRange(IForwardRange):
+class IFwdBwd(ISnap):
     @property
     def back(self):
         raise NotImplementedError()
@@ -88,7 +88,7 @@ class IBidirectionalRange(IForwardRange):
         raise NotImplementedError()
 
 
-class IRandomAccessFinite(IBidirectionalRange):
+class IIdxFinite(IFwdBwd):
     def moveAt(self, i: int):
         raise NotImplementedError()
     def __getitem__(self, i: index+slice):
@@ -102,7 +102,7 @@ class IRandomAccessFinite(IBidirectionalRange):
         raise NotImplementedError()
 
 
-class IRandomAccessInfinite(IForwardRange):
+class IIdxInf(ISnap):
     def moveAt(self, i: int):
         raise NotImplementedError()
 
@@ -111,7 +111,7 @@ class IRandomAccessInfinite(IForwardRange):
         raise NotImplementedError()
 
 
-class IOutputRange(IRange):
+class IPuttable(IRange):
     # a range that implements put
     def put(self, value):
         """Answers void"""
@@ -123,56 +123,36 @@ class IOutputRange(IRange):
 # Range implementations
 # **********************************************************************************************************************
 
-class ChunkUsingFR(IForwardRange):
-    # chunks the input range on change of a function applied to the front element
-    def __init__(self, r, f):
-        assert isinstance(r, IForwardRange)
-        self.r = r
-        self.f = f
-        self.lastF = None if self.r.empty else self.f(self.r.front)
+class ChunkUsing(ISnap):
+    # consumes the ISnap range r and emits a While with a snap or r whenever the function changes value
+    __slots__ = ['_r', '_fn', '_current']
+    def __init__(self, r, fn:T1^T2):
+        assert isinstance(r, ISnap)
+        self._r = r
+        self._fn = fn
+        self._current = None if self._r.empty else self._fn(self._r.front)
     @property
     def empty(self):
-        return self.r.empty
+        return self._r.empty
     @property
     def front(self):
-        assert not self.r.empty
-        return ChunkFR(self.r, self.f, self.lastF)
+        assert not self._r.empty
+        return While(self._r.snap(), self._fn, self._current)
     def popFront(self):
-        assert not self.r.empty
-        while not self.r.empty and self.f(self.r.front) == self.lastF:
-            self.r.popFront()
-        if not self.r.empty:
-            self.lastF = self.f(self.r.front)
-    def save(self):
-        return ChunkUsingFR(self.r.save(), self.f)
+        assert not self._r.empty
+        while not self._r.empty and self._fn(self._r.front) == self._current:
+            self._r.popFront()
+        if not self._r.empty:
+            self._current = self._fn(self._r.front)
+    def snap(self):
+        return ChunkUsing(self._r.snap(), self._fn)
     def __repr__(self):
-        return 'ChunkUsingFR(%s,%s)' % (self.r, self.curF)
+        return 'ChunkUsing(%s,%s)' % (self._r, self._current)
 
 
-class ChunkFR(IForwardRange):
-    # a chunk of a forward range that is defined by a function applied to the front element
-    def __init__(self, r, f:T^bool, curF):
-        self.r = r
-        self.f = f
-        self.curF = curF
-    @property
-    def empty(self):
-        return self.r.empty or self.curF != self.f(self.r.front)
-    @property
-    def front(self):
-        return self.r.front
-    def popFront(self):
-        assert not self.r.empty
-        self.r.popFront()
-    def save(self):
-        return ChunkFR(self.r.save(), self.f, self.curF)
-    def __repr__(self):
-        return 'ChunkFR(%s)' % self.curF
-
-
-class ChainFR(IForwardRange):
+class Chain(ISnap):
     def __init__(self, listOfRanges):
-        self.rOfR = listOfRanges >> to >> IndexableFR
+        self.rOfR = listOfRanges >> to >> SeqAdaptor
         if self.rOfR.empty:
             self.curR = None
         else:
@@ -194,7 +174,7 @@ class ChainFR(IForwardRange):
             self.curR.popFront()
 
 
-class ChunkUsingSubRangeGeneratorFR(IForwardRange):
+class ChunkUsingSubRangeGeneratorFR(ISnap):
     def __init__(self, r, f):
         self.r = r
         self.f = f
@@ -208,18 +188,44 @@ class ChunkUsingSubRangeGeneratorFR(IForwardRange):
         return self.curSR
     def popFront(self):
         self.curSR = None if self.r.empty else self.f(self.r)
-    def save(self) -> IForwardRange:
-        new = ChunkUsingSubRangeGeneratorFR(self.r.save(), self.f)
-        new.curSR = None if self.curSR is None else self.curSR.save()
+    def snap(self) -> ISnap:
+        new = ChunkUsingSubRangeGeneratorFR(self.r.snap(), self.f)
+        new.curSR = None if self.curSR is None else self.curSR.snap()
         return new
 
 
-class MapFR(IForwardRange):
+class FilterUsing(ISnap):
+    # consumes the ISnap range r and emits values where fn(front) is True
+    __slots__ = ['_r', '_fn']
+    def __init__(self, r, fn:T^bool):
+        assert isinstance(r, ISnap)
+        self._r = r
+        self._fn = fn
+        while not self._r.empty and not self._fn(self._r.front):
+            self._r.popFront()
+    @property
+    def empty(self):
+        return self._r.empty
+    @property
+    def front(self):
+        assert not self._r.empty
+        return self._r.front
+    def popFront(self):
+        self._r.popFront()
+        while not self._r.empty and not self._fn(self._r.front):
+            self._r.popFront()
+    def snap(self):
+        return FilterUsing(self._r.snap(), self._fn)
+    def __repr__(self):
+        return 'FilterUsing(%s)' % (self._r)
+
+
+class Map(ISnap):
     def __init__(self, r, fn):
-        if isinstance(r, IInputRange):
+        if isinstance(r, IFwd):
             self.r = r
         else:
-            self.r = IndexableFR(r)
+            self.r = SeqAdaptor(r)
         if not callable(fn):
             raise TypeError("RMAP.__init__ fn should be a function but got a %s" % type(fn))
         self.f = fn
@@ -231,11 +237,11 @@ class MapFR(IForwardRange):
         return self.f(self.r.front)
     def popFront(self):
         self.r.popFront()
-    def save(self):
-        return MapFR(self.r.save(), self.f)
+    def snap(self):
+        return Map(self.r.snap(), self.f)
 
 
-class FileLineIR(IInputRange):
+class FileLines(IFwd):
     def __init__(self, f, stripNL=False):
         self.f = f
         self.line = self.f.readline()
@@ -249,7 +255,7 @@ class FileLineIR(IInputRange):
         self.line = self.f.readline()
 
 
-class FnAdapterFR(IForwardRange):
+class FnAdapterFR(ISnap):
     # adapts a unary function (that takes a position index) into a forward range
     def __init__(self, f):
         self.f = f
@@ -269,7 +275,7 @@ class FnAdapterFR(IForwardRange):
         if not self.empty:
             self.current = self.f(self.i)
 
-    def save(self):
+    def snap(self):
         new = FnAdapterFR(self.f)
         new.i = self.i
         new.current = new.f(new.i)
@@ -279,36 +285,25 @@ class FnAdapterFR(IForwardRange):
         return 'FnAdapterFR(%s)[%s]' % (self.f, self.i)
 
 
-class IndexableFR(IForwardRange):
-    def __init__(self, indexable):
-        self.indexable = indexable
-        self.i = 0
-    @property
-    def empty(self):
-        return self.i >= len(self.indexable)
-    @property
-    def front(self):
-        return self.indexable[self.i]
-    def popFront(self):
-        self.i += 1
-    def save(self):
-        new = IndexableFR(self.indexable.__class__(self.indexable))
-        new.i = self.i
-        return new
+class LastSink(IPuttable):
+    def __init__(self):
+        self.last = Missing
+    def put(self, value):
+        self.last = value
 
 
-class ListOR(IOutputRange):
-    def __init__(self, list):
-        self.list = list
+class ListSink(IPuttable):
+    def __init__(self, list=Missing):
+        self.list = [] if list is Missing else list
     def put(self, value):
         self.list.append(value)
 
 
-class RaggedZipIR(IInputRange):
+class RaggedZipIR(IFwd):
     """As RZip but input ranges do not need to be of same length, shorter ranges are post padded with Null"""
     def __init__(self, ror):
         self.ror = ror
-        ror = ror.save()
+        ror = ror.snap()
         self.allEmpty = True
         while not ror.empty:
             if not ror.front.empty:
@@ -320,7 +315,7 @@ class RaggedZipIR(IInputRange):
     @property
     def front(self) -> pylist:
         parts = []
-        ror = self.ror.save()
+        ror = self.ror.snap()
         while not ror.empty:
             subrange = ror.front
             if subrange.empty:
@@ -332,7 +327,7 @@ class RaggedZipIR(IInputRange):
             # ror.popFront()
         return parts
     def popFront(self):
-        ror = self.ror.save()
+        ror = self.ror.snap()
         self.allEmpty = True
         while not ror.empty:
             subrange = ror.front
@@ -343,9 +338,28 @@ class RaggedZipIR(IInputRange):
             ror.popFront()
 
 
-class TakeFR(IForwardRange):
+class SeqAdaptor(ISnap):
+    __slots = ['_seq', '_i']
+    def __init__(self, seq):
+        self._seq = seq
+        self._i = 0
+    @property
+    def empty(self):
+        return self._i >= len(self._seq)
+    @property
+    def front(self):
+        return self._seq[self._i]
+    def popFront(self):
+        self._i += 1
+    def snap(self):
+        new = SeqAdaptor(self._seq)
+        new._i = self._i
+        return new
+
+
+class Take(ISnap):
     def __init__(self, r, n):
-        if not isinstance(r, IForwardRange):
+        if not isinstance(r, ISnap):
             raise TypeError(str(r))
         self.r = r
         self.n = n
@@ -360,32 +374,60 @@ class TakeFR(IForwardRange):
         assert not self.empty
         self.r.popFront()
         self.n -= 1
-    def save(self):
-        return TakeFR(self.r.save(), self.n)
+    def snap(self):
+        return Take(self.r.snap(), self.n)
     def __repr__(self):
-        return 'TakeFR(%s,%s)' % (self.r, self.n)
+        return 'Take(%s,%s)' % (self.r, self.n)
 
 
-class UntilFR(IForwardRange):
-    def __init__(self, r, f):
-        if not isinstance(r, IForwardRange):
+class Until(ISnap):
+    # consumes the ISnap range r until fn(front) == v
+    __slots__ = ['_r', '_fn', '_v', '_hasFound']
+    def __init__(self, r, fn, v):
+        if not isinstance(r, ISnap):
             raise TypeError(str(r))
-        self.r = r
-        self.f = f
-        self.hasFound = False
+        self._r = r
+        self._fn = fn
+        self._v = v
+        self._hasFound = False
     @property
     def empty(self):
-        return self.r.empty or self.hasFound
+        return self._r.empty or self._hasFound
     @property
     def front(self):
-        assert not self.r.empty
-        return self.r.front
+        assert not self._r.empty
+        return self._r.front
     def popFront(self):
         assert not self.empty
-        self.hasFound = self.f(self.r.front)
-        self.r.popFront()
-    def save(self):
-        return UntilFR(self.r.save(), self.f)
+        self._hasFound = self._fn(self._r.front) == self._v
+        self._r.popFront()
+    def snap(self):
+        return Until(self._r.snap(), self._fn, self._v)
     def __repr__(self):
-        return 'UntilFR(%s,%s)' % (self.r, self.f)
+        return 'Until(%s,%s)' % (self._r, self._v)
+
+
+class While(ISnap):
+    # consumes the ISnap range r while fn(front) == v
+    __slots__ = ['_r', '_fn', '_v']
+    def __init__(self, r, fn:T1^T2, v):
+        assert isinstance(r, ISnap)
+        self._r = r
+        self._fn = fn
+        self._v = v
+    @property
+    def empty(self):
+        return self._r.empty or self._fn(self._r.front) != self._v
+    @property
+    def front(self):
+        assert not self.empty
+        return self._r.front
+    def popFront(self):
+        assert not self.empty
+        self._r.popFront()
+    def snap(self):
+        return While(self._r.snap(), self._fn, self._v)
+    def __repr__(self):
+        return 'While(%s)' % self._v
+
 

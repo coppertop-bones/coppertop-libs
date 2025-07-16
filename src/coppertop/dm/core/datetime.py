@@ -53,6 +53,10 @@ def weekdayName(x):
     return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][x]
 
 @coppertop
+def weekdayName(x:datetime.date):
+    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][x.weekday()]
+
+@coppertop
 def weekdayName(x, locale):
     return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][x]
 

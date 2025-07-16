@@ -32,7 +32,7 @@ def box(v) -> _SBT:
 def box(v, t:T) -> T:
     return _tv(t, v)
 
-@coppertop
+@coppertop(style=binary)
 def getAttr(x, name):
     return getattr(x, name)
 

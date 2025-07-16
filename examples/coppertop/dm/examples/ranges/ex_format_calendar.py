@@ -80,33 +80,16 @@
 
 
 # OPEN: can to take a construction function?
-# week >> rMap >> dateAsDayString >> rMaterialise
+# week >> rMap >> dateAsDayString >> rExhaustInto >> ListSink() >> rTarget
 # week >> rMap >> dateAsDayString >> to >> pylist
 
-# rMap creates a MapFR
+# rMap creates a Map
 # @coppertop(style=binary)
-# def to(r:MapFR+FR, y:pylist):   << problem with the dispatch here since metric is currently average distance
+# def to(r:Map+FR, y:pylist):   << problem with the dispatch here since metric is currently average distance
 
 # but in this example we want to sink to stdout not create a list. In general we have inputs, outputs and control
 # Python hides all the control by doing what is necessary to get the next result however out 3 month process is a
-# breadth first access not a depth first access, so we can't use my naive rMaterialise to test at that level
-#
-# @coppertop
-# def rMaterialise(r):
-#     return _materialise(r)
-#
-# def _materialise(r):
-#     answer = list()
-#     while not r.empty:
-#         e = r.front
-#         if isinstance(e, IInputRange) and not isinstance(e, IRandomAccessInfinite):
-#             answer.append(_materialise(e))
-#             if not r.empty:  # the sub range may exhaust this range
-#                 r.popFront()
-#         else:
-#             answer.append(e)
-#             r.popFront()
-#     return answer
+# breadth first access not a depth first access
 #
 # DAG - multiple parents (inputs), multiple roots (outputs), no cycles - polytree
 # control is push (event based) or pull.. also may want to load balance, e.g. the DAG can buffer or it parts of it may
@@ -136,21 +119,19 @@ from bones.core.sentinels import Null
 from coppertop.pipe import *
 from bones.ts.metatypes import BTUnion
 from coppertop.dm.core import count, joinAll, collect, interleave, pad, strip, to, day, weekday, weekdayName, \
-    monthLongName, addDays, toCTimeFormat, parseDate
-from coppertop.dm.core.misc import not_
+    monthLongName, addDays, toCTimeFormat, parseDate, not_, getAttr
 from coppertop.dm.core.types import date, txt, pylist
 from coppertop.dm.testing import check, equals
 from coppertop.dm.pp import PP
 from coppertop.dm.wip import wrapInList
 
-from coppertop.dm.examples.ranges.agents import IForwardRange, ListOR, RaggedZipIR, FnAdapterFR, ChainFR, \
-    IndexableFR
-from coppertop.dm.examples.ranges.utils import rChunkUsingSubRangeGeneratorFR, rChunkUsing, rPushAllTo, EMPTY, rMap, \
-    rUntil, rReplaceWith, rMaterialise, rFront, rTake
+from coppertop.dm.examples.ranges import nodes
+from coppertop.dm.examples.ranges.nodes import ISnap, ListSink, RaggedZipIR, FnAdapterFR, Chain, SeqAdaptor, EMPTY
+from coppertop.dm.examples.ranges.utils import rChunkUsingSubRangeGeneratorFR, rChunkUsing, rExhaustInto, rMap, \
+    rUntil, rReplaceWith, rFront, rTake, rChain, rTarget
 
 
 YYYY_MM_DD = 'YYYY.MM.DD' >> toCTimeFormat
-
 
 
 
@@ -164,25 +145,20 @@ def _ithDateInYear(year, i):
     return EMPTY if ithDate.year != year else ithDate
 
 
-
 @coppertop
 def rMonthChunks(datesR):
     return datesR >> rChunkUsing >> (lambda x: x.month)
 
 @coppertop
-def _untilWeekdayName(datesR, wdayName):
-    return datesR >> rUntil >> (lambda d: d >> weekday >> weekdayName == wdayName)
-
-@coppertop
 def weekChunks(r):
-    return r >> rChunkUsingSubRangeGeneratorFR >> _untilWeekdayName(_, 'Sun')
+    return r >> rChunkUsingSubRangeGeneratorFR >> rUntil(_, weekdayName, 'Sun')
 
 @coppertop
 def dateAsDayString(d):
     return d >> day >> to >> txt >> pad(_, dict(right=3))
 
 
-class WeekStringsFR(IForwardRange):
+class WeekStringsFR(ISnap):
     def __init__(self, rOfWeeks):
         self.rOfWeeks = rOfWeeks
 
@@ -196,16 +172,16 @@ class WeekStringsFR(IForwardRange):
         week = self.rOfWeeks.front
         startDay = week.front >> weekday
         preBlanks = ['   '] * startDay
-        dayStrings = week >> rMap >> dateAsDayString >> rMaterialise
+        dayStrings = week >> rMap >> dateAsDayString >> rExhaustInto >> ListSink() >> rTarget
         postBlanks = ['   '] * (7 - ((dayStrings >> count) + startDay))
         return (preBlanks + dayStrings + postBlanks) >> joinAll
 
     def popFront(self):
         self.rOfWeeks.popFront()
 
-    def save(self):
-        # TODO delete once we've debugged the underlying save issue
-        return WeekStringsFR(self.rOfWeeks.save())
+    def snap(self):
+        # TODO delete once we've debugged the underlying checkpoint issue
+        return WeekStringsFR(self.rOfWeeks.snap())
 
 @coppertop
 def monthTitle(month, width):
@@ -214,13 +190,13 @@ def monthTitle(month, width):
 @coppertop
 def monthLines(monthDays):
     return [
-        monthDays.front.month >> monthTitle(_, 21) >> wrapInList >> to >> IndexableFR,
+        monthDays.front.month >> monthTitle(_, 21) >> wrapInList >> to >> SeqAdaptor,
         monthDays >> weekChunks >> to >> WeekStringsFR
-    ] >> to >> ChainFR
+    ] >> rChain
 
 @coppertop
 def monthStringsToCalendarRow(strings, blank, sep):
-    return strings >> rReplaceWith(_, Null, blank) >> rMaterialise >> interleave >> sep
+    return strings >> rReplaceWith(_, Null, blank) >> rExhaustInto >> ListSink() >> rTarget >> interleave >> sep
 
 def pasteBlocks(rOfMonthChunk):
     return rOfMonthChunk >> to >> RaggedZipIR >> rMap >> monthStringsToCalendarRow(" "*21, " ")
@@ -238,7 +214,7 @@ def datesBetween(start:date, end:date):
 
 def test_allDaysInYear():
     actual = []
-    o = 2020 >> rDatesInYear >> rPushAllTo >> ListOR(actual)
+    o = 2020 >> rDatesInYear >> rExhaustInto >> ListSink(actual)
     actual[0] >> check >> equals >> datetime.date(2020, 1, 1)
     actual[-1] >> check >> equals >> datetime.date(2020, 12, 31)
     a = [e for e in 2020 >> rDatesInYear]
@@ -251,14 +227,14 @@ def test_allDaysInYear():
 def test_datesBetween():
     ('2020.01.16' >> parseDate(_, YYYY_MM_DD)) >> datesBetween >> ('2020.01.29' >> parseDate(_, YYYY_MM_DD)) \
         >> rMap >> day \
-        >> rMaterialise \
+        >> rExhaustInto >> ListSink() >> rTarget \
         >> check >> equals >> [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
 
 
 def test_chunkingIntoMonths():
     2020 >> rDatesInYear \
         >> rMonthChunks \
-        >> rMaterialise \
+        >> rExhaustInto(_, _, 1) >> ListSink() >> rTarget \
         >> count \
         >> check >> equals >> 12
 
@@ -266,21 +242,21 @@ def test_chunkingIntoMonths():
 def test_checkNumberOfDaysInEachMonth():
     2020 >> rDatesInYear \
         >> rMonthChunks \
-        >> rMaterialise \
-        >> collect >> count \
+        >> rExhaustInto(_, _, 1) >> ListSink() >> rTarget \
+        >> collect >> (lambda r: r >> rExhaustInto >> ListSink() >> rTarget >> count) \
         >> check >> equals >> [31,29,31,30,31,30,31,31,30,31,30,31]
 
 
 def test__untilWeekdayName():
     r = 2020 >> rDatesInYear
-    dates = [d for d in r >> _untilWeekdayName(_, 'Sun')]
-    dates[-1] >> check >> equals >> datetime.date(2020, 1, 5)   # the sunday
+    actual = r >> rUntil >> weekdayName >> 'Sun' >> rExhaustInto >> nodes.LastSink() >> rTarget
+    actual >> check >> equals >> datetime.date(2020, 1, 5)      # the sunday
     r >> rFront >> check >> equals >> datetime.date(2020, 1, 6) # the monday
 
 
 def test_WeekChunks():
     datesR = '2020.01.16' >> parseDate(_, YYYY_MM_DD) >> datesBetween >> ('2020.01.29' >> parseDate(_, YYYY_MM_DD))
-    weeksR = datesR >> rChunkUsingSubRangeGeneratorFR >> _untilWeekdayName(_, 'Sun')
+    weeksR = datesR >> rChunkUsingSubRangeGeneratorFR >> rUntil(_, weekdayName, 'Sun')
     actual = []
     while not weeksR.empty:
         weekR = weeksR >> rFront
@@ -304,37 +280,30 @@ def test_WeekStrings():
         >> weekChunks
         >> to >> WeekStringsFR
     )
-    weekStringsR2 = weekStringsR.save()
+    weekStringsR2 = weekStringsR.snap()
     [ws for ws in weekStringsR] >> check >> equals >> expectedJan2020
 
     actual = [ws for ws in weekStringsR2]
     if actual >> equals >> expectedJan2020 >> not_:
-        "fix WeekStringsFR.save()" >> PP
+        "fix WeekStringsFR.snap()" >> PP
 
 
 def test_MonthTitle():
-    1 >> monthTitle(_, 21) >> wrapInList >> to >> IndexableFR \
-        >> rMap >> strip >> rMaterialise \
+    1 >> monthTitle(_, 21) >> wrapInList >> to >> SeqAdaptor \
+        >> rMap >> strip >> rExhaustInto >> ListSink() >> rTarget \
         >> check >> equals >> ['January']
 
 
 def test_oneMonthsOutput():
     [
-        1 >> monthTitle(_, 21) >> wrapInList >> to >> IndexableFR,
+        1 >> monthTitle(_, 21) >> wrapInList >> to >> SeqAdaptor,
         2020 >> rDatesInYear
             >> rMonthChunks
             >> rFront
             >> weekChunks
             >> to >> WeekStringsFR
-    ] >> to >> ChainFR \
-        >> rMaterialise >> check >> equals >> Jan2020TitleAndDateLines
-
-    # equivalently
-    check(
-        rMaterialise(monthLines(rFront(rMonthChunks(rDatesInYear(2020))))),
-        equals,
-        Jan2020TitleAndDateLines
-    )
+    ] >> rChain \
+        >> rExhaustInto >> ListSink() >> rTarget >> check >> equals >> Jan2020TitleAndDateLines
 
 
 @skip
@@ -344,7 +313,7 @@ def test_firstQuarter():
         >> rTake >> 3 \
         >> to >> RaggedZipIR >> rMap >> monthStringsToCalendarRow(_, " "*21, " ")
     )
-    x = r >> rMaterialise
+    x = r >> rExhaustInto >> ListSink() >> rTarget
     x >> check >> equals >> Q1_2013TitleAndDateLines
 
 

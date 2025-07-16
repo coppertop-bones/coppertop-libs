@@ -15,22 +15,21 @@ from coppertop.pipe import *
 from bones.ts.metatypes import BTUnion
 from bones.core.errors import NotYetImplemented
 from coppertop.dm.core.types import pylist
-from coppertop.dm.examples.ranges.agents import MapFR, UntilFR, ChunkUsingSubRangeGeneratorFR, ChunkUsingFR, \
-    EMPTY, IInputRange, IRandomAccessInfinite, TakeFR
+from coppertop.dm.examples.ranges import nodes
 from coppertop.dm.core.types import pytuple
 
 
 @coppertop
 def rChain(rs):
-    raise NotYetImplemented()
+    return nodes.Chain(rs)
 
 @coppertop(style=binary)
 def rChunkUsing(r, f):
-    return ChunkUsingFR(r, f)
+    return nodes.ChunkUsing(r, f)
 
 @coppertop(style=binary)
 def rChunkUsingSubRangeGeneratorFR(r, f):
-    return ChunkUsingSubRangeGeneratorFR(r, f)
+    return nodes.ChunkUsingSubRangeGeneratorFR(r, f)
 
 @coppertop
 def rDrop(r, n):
@@ -40,23 +39,39 @@ def rDrop(r, n):
 def rDropBack(r, n):
     raise NotYetImplemented()
 
-@coppertop
-def rFilter(r, f):
-    raise NotYetImplemented()
+@coppertop(style=binary)
+def rExhaustInto(inR, outR):
+    while not inR.empty:
+        e = inR.front
+        if isinstance(e, nodes.IIdxInf):
+            raise TypeError('Infinite range encountered')
+        elif isinstance(e, nodes.IFwd):
+            rExhaustInto(e, outR)
+            if not inR.empty:  # the sub range may exhaust this range
+                inR.popFront()
+        else:
+            outR.put(e)
+            inR.popFront()
+    return outR
 
-@coppertop
-def rFind(r, value):
-    while not r.empty:
-        if r.front == value:
-            break
-        r.popFront()
-    return r
+@coppertop(style=binary)
+def rExhaustInto(inR, outR, depth):
+    assert depth == 1  # OPEN: implement depth > 1
+    while not inR.empty:
+        e = inR.front
+        outR.put(e)
+        inR.popFront()
+    return outR
+
+@coppertop(style=binary)
+def rFilter(r, fn):
+    return nodes.FilterUsing(r, fn)
 
 @coppertop
 def rFnAdapterEager(f):
     answer = []
     i = 0
-    while (x := f(i)) != EMPTY:
+    while (x := f(i)) != nodes.EMPTY:
         answer.append(x)
         i += 1
     return answer
@@ -65,9 +80,13 @@ def rFnAdapterEager(f):
 def rFront(r):
     return r.front
 
+@coppertop
+def rInject(r, seed, f):
+    raise NotYetImplemented()
+
 @coppertop(style=binary)
 def rMap(x, y):
-    return MapFR(x, y)
+    return nodes.Map(x, y)
 
 @coppertop
 def rMaterialise(r):
@@ -77,7 +96,7 @@ def _materialise(r):
     answer = list()
     while not r.empty:
         e = r.front
-        if isinstance(e, IInputRange) and not isinstance(e, IRandomAccessInfinite):
+        if isinstance(e, nodes.IFwd) and not isinstance(e, nodes.IIdxInf):
             answer.append(_materialise(e))
             if not r.empty:  # the sub range may exhaust this range
                 r.popFront()
@@ -87,31 +106,44 @@ def _materialise(r):
     return answer
 
 @coppertop(style=binary)
-def rPushAllTo(inR, outR):
-    while not inR.empty:
-        outR.put(inR.front)
-        inR.popFront()
-    return outR
-
-@coppertop(style=binary)
 def rPut(r, x):
     return r.put(x)
 
 @coppertop
-def rInject(r, seed, f):
-    raise NotYetImplemented()
+def rReplaceWith(haystack, needle, replacement):
+    return haystack >> rMap >> (lambda e: replacement if e == needle else e)
+
+@coppertop
+def rSeek(r, value):
+    while not r.empty:
+        if r.front == value:
+            break
+        r.popFront()
+    return r
 
 @coppertop(style=binary)
 def rTake(r, n):
-    return TakeFR(r, n)
+    return nodes.Take(r, n)
 
 @coppertop(style=binary)
 def rTakeBack(r, n):
     raise NotYetImplemented()
 
-@coppertop(style=binary)
-def rUntil(x, y):
-    return UntilFR(x, y)
+@coppertop
+def rTarget(sink:nodes.ListSink):
+    return sink.list
+
+@coppertop
+def rTarget(sink:nodes.LastSink):
+    return sink.last
+
+@coppertop(style=ternary)
+def rUntil(r, fn, v):
+    return nodes.Until(r, fn, v)
+
+@coppertop(style=ternary)
+def rWhile(r, fn, v):
+    return nodes.While(r, fn, v)
 
 @coppertop
 def rZip(r):
@@ -120,19 +152,6 @@ def rZip(r):
 
 
 
-@coppertop
-def popFront(r):
-    r.popFront()
-    return r
-
-@coppertop
-def popBack(r):
-    r.popBack()
-    return r
-
-@coppertop
-def rReplaceWith(haystack, needle, replacement):
-    return haystack >> rMap >> (lambda e: replacement if e == needle else e)
 
 
 

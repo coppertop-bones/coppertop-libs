@@ -6,10 +6,10 @@
 # **********************************************************************************************************************
 
 from coppertop.pipe import *
-from coppertop.dm.core import collect, to
+from coppertop.dm.core import collect, to, getAttr
 from coppertop.dm.testing import check, equals
-from coppertop.dm.examples.ranges.agents import FnAdapterFR
-from coppertop.dm.examples.ranges.utils import EMPTY, rFnAdapterEager, rMap, rMaterialise
+from coppertop.dm.examples.ranges import nodes
+from coppertop.dm.examples.ranges.utils import rFnAdapterEager, rMap, rExhaustInto, rTarget
 from coppertop.dm.core.datetime import addDays, day, toCTimeFormat
 from coppertop.dm.core.conv import parseDate
 
@@ -18,11 +18,11 @@ YYYY_MM_DD = 'YYYY.MM.DD' >> toCTimeFormat
 @coppertop
 def _ithDateBetween2(start, end, i):
     ithDate = start >> addDays >> i
-    return EMPTY if ithDate > end else ithDate
+    return nodes.EMPTY if ithDate > end else ithDate
 
 @coppertop(style=binary)
 def datesBetween2(start, end):
-     return _ithDateBetween2(start, end, _) >> to >> FnAdapterFR
+     return _ithDateBetween2(start, end, _) >> to >> nodes.FnAdapterFR
 
 @coppertop(style=binary)
 def datesBetweenEager2(start, end):
@@ -32,7 +32,7 @@ def datesBetweenEager2(start, end):
 def test_datesBetween_lazy():
     ('2020.01.16' >> parseDate(_, YYYY_MM_DD)) >> datesBetween2 >> ('2020.01.29' >> parseDate(_, YYYY_MM_DD)) \
     >> rMap >> day \
-    >> rMaterialise >> check >> equals >> [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+    >> rExhaustInto >> nodes.ListSink() >> rTarget >> check >> equals >> [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
 
 def test_datesBetween_eager():
     ('2020.01.16' >> parseDate(_, YYYY_MM_DD)) >> datesBetweenEager2 >> ('2020.01.29' >> parseDate(_, YYYY_MM_DD)) \
