@@ -80,10 +80,10 @@
 
 
 # OPEN: can to take a construction function?
-# week >> rEach >> dateAsDayString >> rMaterialise
-# week >> rEach >> dateAsDayString >> to >> pylist
+# week >> rMap >> dateAsDayString >> rMaterialise
+# week >> rMap >> dateAsDayString >> to >> pylist
 
-# rEach creates a MapFR
+# rMap creates a MapFR
 # @coppertop(style=binary)
 # def to(r:MapFR+FR, y:pylist):   << problem with the dispatch here since metric is currently average distance
 
@@ -107,6 +107,26 @@
 #             answer.append(e)
 #             r.popFront()
 #     return answer
+#
+# DAG - multiple parents (inputs), multiple roots (outputs), no cycles - polytree
+# control is push (event based) or pull.. also may want to load balance, e.g. the DAG can buffer or it parts of it may
+# be able to look ahead of others... e.g. pull all the numbers upto the next prime, then have to do a prime number pull
+# tick data may be like this in backtest mode, usually the controller would handle that unless we are writing a
+# controller on bones / coppertop
+#
+# see https://en.wikipedia.org/wiki/Directed_acyclic_graph
+#
+# in push mode we need to be able to invalidate our roots
+# https://kotlinlang.org/docs/sequences.html
+#
+# in the calendar example we get exactly one month line from each month in the quarter - no more no less
+# grabbing the line from the earliest month means dates computation results can be dropped and grabbing a line from the
+# latest month means new date computations must be done. If we were resource limited we would want to have control over
+# when we do this, e.g. while spare memory do a row (atomically as we know we will consume approximately the same as we
+# free), but if the system is under constraints we could cooperatively free some memory and wait until there is some
+# free before continuing). We should be able to build this in.
+
+# in the parallel world of bones modules we could wrap a C functions by specifying its signature in bones / Python
 
 
 import datetime, pytest
@@ -125,8 +145,8 @@ from coppertop.dm.wip import wrapInList
 
 from coppertop.dm.examples.ranges.agents import IForwardRange, ListOR, RaggedZipIR, FnAdapterFR, ChainFR, \
     IndexableFR
-from coppertop.dm.examples.ranges.utils import rChunkUsingSubRangeGeneratorFR, rChunkFROnChangeOf, rGetIRIter, \
-    rPushAllTo, EMPTY, rEach, rUntil, rReplaceWith, rMaterialise, rFront, rTake
+from coppertop.dm.examples.ranges.utils import rChunkUsingSubRangeGeneratorFR, rChunkUsing, rPushAllTo, EMPTY, rMap, \
+    rUntil, rReplaceWith, rMaterialise, rFront, rTake
 
 
 YYYY_MM_DD = 'YYYY.MM.DD' >> toCTimeFormat
@@ -147,7 +167,7 @@ def _ithDateInYear(year, i):
 
 @coppertop
 def rMonthChunks(datesR):
-    return datesR >> rChunkFROnChangeOf(_, lambda x: x.month)
+    return datesR >> rChunkUsing >> (lambda x: x.month)
 
 @coppertop
 def _untilWeekdayName(datesR, wdayName):
@@ -155,7 +175,7 @@ def _untilWeekdayName(datesR, wdayName):
 
 @coppertop
 def weekChunks(r):
-    return r >> rChunkUsingSubRangeGeneratorFR(_, _untilWeekdayName(_, 'Sun'))
+    return r >> rChunkUsingSubRangeGeneratorFR >> _untilWeekdayName(_, 'Sun')
 
 @coppertop
 def dateAsDayString(d):
@@ -176,7 +196,7 @@ class WeekStringsFR(IForwardRange):
         week = self.rOfWeeks.front
         startDay = week.front >> weekday
         preBlanks = ['   '] * startDay
-        dayStrings = week >> rEach >> dateAsDayString >> rMaterialise
+        dayStrings = week >> rMap >> dateAsDayString >> rMaterialise
         postBlanks = ['   '] * (7 - ((dayStrings >> count) + startDay))
         return (preBlanks + dayStrings + postBlanks) >> joinAll
 
@@ -203,7 +223,7 @@ def monthStringsToCalendarRow(strings, blank, sep):
     return strings >> rReplaceWith(_, Null, blank) >> rMaterialise >> interleave >> sep
 
 def pasteBlocks(rOfMonthChunk):
-    return rOfMonthChunk >> to >> RaggedZipIR >> rEach >> monthStringsToCalendarRow(" "*21, " ")
+    return rOfMonthChunk >> to >> RaggedZipIR >> rMap >> monthStringsToCalendarRow(" "*21, " ")
 
 @coppertop
 def _ithDateBetween(start, end, i):
@@ -221,7 +241,7 @@ def test_allDaysInYear():
     o = 2020 >> rDatesInYear >> rPushAllTo >> ListOR(actual)
     actual[0] >> check >> equals >> datetime.date(2020, 1, 1)
     actual[-1] >> check >> equals >> datetime.date(2020, 12, 31)
-    a = [e for e in 2020 >> rDatesInYear >> rGetIRIter]
+    a = [e for e in 2020 >> rDatesInYear]
     b = a >> count
     b \
         >> check \
@@ -230,7 +250,7 @@ def test_allDaysInYear():
 
 def test_datesBetween():
     ('2020.01.16' >> parseDate(_, YYYY_MM_DD)) >> datesBetween >> ('2020.01.29' >> parseDate(_, YYYY_MM_DD)) \
-        >> rEach >> day \
+        >> rMap >> day \
         >> rMaterialise \
         >> check >> equals >> [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
 
@@ -253,18 +273,18 @@ def test_checkNumberOfDaysInEachMonth():
 
 def test__untilWeekdayName():
     r = 2020 >> rDatesInYear
-    dates = [d for d in r >> _untilWeekdayName(_, 'Sun') >> rGetIRIter]
+    dates = [d for d in r >> _untilWeekdayName(_, 'Sun')]
     dates[-1] >> check >> equals >> datetime.date(2020, 1, 5)   # the sunday
     r >> rFront >> check >> equals >> datetime.date(2020, 1, 6) # the monday
 
 
 def test_WeekChunks():
     datesR = '2020.01.16' >> parseDate(_, YYYY_MM_DD) >> datesBetween >> ('2020.01.29' >> parseDate(_, YYYY_MM_DD))
-    weeksR = rChunkUsingSubRangeGeneratorFR(datesR, _untilWeekdayName(_, 'Sun'))
+    weeksR = datesR >> rChunkUsingSubRangeGeneratorFR >> _untilWeekdayName(_, 'Sun')
     actual = []
     while not weeksR.empty:
         weekR = weeksR >> rFront
-        actual.append([d >> day for d in weekR >> rGetIRIter])
+        actual.append([d >> day for d in weekR])
         weeksR.popFront()
     actual >> check >> equals >> [[16, 17, 18, 19], [20, 21, 22, 23, 24, 25, 26], [27, 28, 29]]
 
@@ -285,16 +305,16 @@ def test_WeekStrings():
         >> to >> WeekStringsFR
     )
     weekStringsR2 = weekStringsR.save()
-    [ws for ws in weekStringsR >> rGetIRIter] >> check >> equals >> expectedJan2020
+    [ws for ws in weekStringsR] >> check >> equals >> expectedJan2020
 
-    actual = [ws for ws in weekStringsR2 >> rGetIRIter]
+    actual = [ws for ws in weekStringsR2]
     if actual >> equals >> expectedJan2020 >> not_:
         "fix WeekStringsFR.save()" >> PP
 
 
 def test_MonthTitle():
     1 >> monthTitle(_, 21) >> wrapInList >> to >> IndexableFR \
-        >> rEach >> strip >> rMaterialise \
+        >> rMap >> strip >> rMaterialise \
         >> check >> equals >> ['January']
 
 
@@ -322,7 +342,7 @@ def test_firstQuarter():
     r = (2020 >> rDatesInYear \
         >> rMonthChunks \
         >> rTake >> 3 \
-        >> to >> RaggedZipIR >> rEach >> monthStringsToCalendarRow(_, " "*21, " ")
+        >> to >> RaggedZipIR >> rMap >> monthStringsToCalendarRow(_, " "*21, " ")
     )
     x = r >> rMaterialise
     x >> check >> equals >> Q1_2013TitleAndDateLines
@@ -355,6 +375,7 @@ def main():
     test_allDaysInYear()
     test_datesBetween()
     test_chunkingIntoMonths()
+
     test_checkNumberOfDaysInEachMonth()
     test__untilWeekdayName()
     test_WeekChunks()

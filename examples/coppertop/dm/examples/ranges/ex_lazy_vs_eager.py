@@ -9,7 +9,7 @@ from coppertop.pipe import *
 from coppertop.dm.core import collect, to
 from coppertop.dm.testing import check, equals
 from coppertop.dm.examples.ranges.agents import FnAdapterFR
-from coppertop.dm.examples.ranges.utils import EMPTY, rFnAdapterEager, rEach, rMaterialise
+from coppertop.dm.examples.ranges.utils import EMPTY, rFnAdapterEager, rMap, rMaterialise
 from coppertop.dm.core.datetime import addDays, day, toCTimeFormat
 from coppertop.dm.core.conv import parseDate
 
@@ -31,7 +31,7 @@ def datesBetweenEager2(start, end):
 
 def test_datesBetween_lazy():
     ('2020.01.16' >> parseDate(_, YYYY_MM_DD)) >> datesBetween2 >> ('2020.01.29' >> parseDate(_, YYYY_MM_DD)) \
-    >> rEach >> day \
+    >> rMap >> day \
     >> rMaterialise >> check >> equals >> [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
 
 def test_datesBetween_eager():

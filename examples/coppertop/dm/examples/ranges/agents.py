@@ -16,7 +16,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 from coppertop.pipe import *
 from bones.core.sentinels import Null
 from coppertop.dm.core import to
-from coppertop.dm.core.types import pylist, bool, index
+from coppertop.dm.core.types import pylist, bool, index, T
 
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__ + ' - imports done')
 
@@ -58,22 +58,13 @@ class IInputRange(IRange):
     def front(self, value):
         raise NotImplementedError()
 
-    # python iterator interface - so we can use ranges in list comprehensions and for loops!!! ugh
-    # this is convenient but possibly too convenient and it may muddy things hence the ugly name
-    @property
-    def _getIRIter(self):
-        return IInputRange._Iter(self)
-
-    class _Iter:
-        def __init__(self, r):
-            self.r = r
-        def __iter__(self):
-            return self
-        def __next__(self):
-            if self.r.empty: raise StopIteration
-            answer = self.r.front
-            self.r.popFront()
-            return answer
+    def __iter__(self):
+        return self
+    def __next__(self):
+        if self.empty: raise StopIteration
+        answer = self.front
+        self.popFront()
+        return answer
 
 
 class IForwardRange(IInputRange):
@@ -132,35 +123,35 @@ class IOutputRange(IRange):
 # Range implementations
 # **********************************************************************************************************************
 
-class ChunkFROnChangeOf(IForwardRange):
+class ChunkUsingFR(IForwardRange):
     # chunks the input range on change of a function applied to the front element
-    def __init__(self, r, fn):
+    def __init__(self, r, f):
         assert isinstance(r, IForwardRange)
         self.r = r
-        self.fn = fn
-        self.lastF = None if self.r.empty else self.fn(self.r.front)
+        self.f = f
+        self.lastF = None if self.r.empty else self.f(self.r.front)
     @property
     def empty(self):
         return self.r.empty
     @property
     def front(self):
         assert not self.r.empty
-        return ChunkFR(self.r, self.fn, self.lastF)
+        return ChunkFR(self.r, self.f, self.lastF)
     def popFront(self):
         assert not self.r.empty
-        while not self.r.empty and self.fn(self.r.front) == self.lastF:
+        while not self.r.empty and self.f(self.r.front) == self.lastF:
             self.r.popFront()
         if not self.r.empty:
-            self.lastF = self.fn(self.r.front)
+            self.lastF = self.f(self.r.front)
     def save(self):
-        return ChunkFROnChangeOf(self.r.save(), self.fn)
+        return ChunkUsingFR(self.r.save(), self.f)
     def __repr__(self):
-        return 'ChunkFROnChangeOf(%s,%s)' % (self.r, self.curF)
+        return 'ChunkUsingFR(%s,%s)' % (self.r, self.curF)
 
 
 class ChunkFR(IForwardRange):
     # a chunk of a forward range that is defined by a function applied to the front element
-    def __init__(self, r, f, curF):
+    def __init__(self, r, f:T^bool, curF):
         self.r = r
         self.f = f
         self.curF = curF
@@ -221,6 +212,27 @@ class ChunkUsingSubRangeGeneratorFR(IForwardRange):
         new = ChunkUsingSubRangeGeneratorFR(self.r.save(), self.f)
         new.curSR = None if self.curSR is None else self.curSR.save()
         return new
+
+
+class MapFR(IForwardRange):
+    def __init__(self, r, fn):
+        if isinstance(r, IInputRange):
+            self.r = r
+        else:
+            self.r = IndexableFR(r)
+        if not callable(fn):
+            raise TypeError("RMAP.__init__ fn should be a function but got a %s" % type(fn))
+        self.f = fn
+    @property
+    def empty(self):
+        return self.r.empty
+    @property
+    def front(self):
+        return self.f(self.r.front)
+    def popFront(self):
+        self.r.popFront()
+    def save(self):
+        return MapFR(self.r.save(), self.f)
 
 
 class FileLineIR(IInputRange):
@@ -290,27 +302,6 @@ class ListOR(IOutputRange):
         self.list = list
     def put(self, value):
         self.list.append(value)
-
-
-class MapFR(IForwardRange):
-    def __init__(self, r, fn):
-        if isinstance(r, IInputRange):
-            self.r = r
-        else:
-            self.r = IndexableFR(r)
-        if not callable(fn):
-            raise TypeError("RMAP.__init__ fn should be a function but got a %s" % type(fn))
-        self.f = fn
-    @property
-    def empty(self):
-        return self.r.empty
-    @property
-    def front(self):
-        return self.f(self.r.front)
-    def popFront(self):
-        self.r.popFront()
-    def save(self):
-        return MapFR(self.r.save(), self.f)
 
 
 class RaggedZipIR(IInputRange):

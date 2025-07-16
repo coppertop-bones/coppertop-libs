@@ -15,30 +15,42 @@ from coppertop.pipe import *
 from bones.ts.metatypes import BTUnion
 from bones.core.errors import NotYetImplemented
 from coppertop.dm.core.types import pylist
-from coppertop.dm.examples.ranges.agents import MapFR, UntilFR, ChunkUsingSubRangeGeneratorFR, ChunkFROnChangeOf, \
+from coppertop.dm.examples.ranges.agents import MapFR, UntilFR, ChunkUsingSubRangeGeneratorFR, ChunkUsingFR, \
     EMPTY, IInputRange, IRandomAccessInfinite, TakeFR
 from coppertop.dm.core.types import pytuple
 
 
 @coppertop
-def rChunkFROnChangeOf(r, f):
-    return ChunkFROnChangeOf(r, f)
+def rChain(rs):
+    raise NotYetImplemented()
 
-@coppertop
+@coppertop(style=binary)
+def rChunkUsing(r, f):
+    return ChunkUsingFR(r, f)
+
+@coppertop(style=binary)
 def rChunkUsingSubRangeGeneratorFR(r, f):
     return ChunkUsingSubRangeGeneratorFR(r, f)
+
+@coppertop
+def rDrop(r, n):
+    raise NotYetImplemented()
 
 @coppertop
 def rDropBack(r, n):
     raise NotYetImplemented()
 
-@coppertop(style=binary)
-def rEach(x, y):
-    return MapFR(x, y)
-
 @coppertop
 def rFilter(r, f):
     raise NotYetImplemented()
+
+@coppertop
+def rFind(r, value):
+    while not r.empty:
+        if r.front == value:
+            break
+        r.popFront()
+    return r
 
 @coppertop
 def rFnAdapterEager(f):
@@ -53,18 +65,9 @@ def rFnAdapterEager(f):
 def rFront(r):
     return r.front
 
-@coppertop
-def rFind(r, value):
-    while not r.empty:
-        if r.front == value:
-            break
-        r.popFront()
-    return r
-
-@coppertop
-def rGetIRIter(r):
-    # the name is deliberately semi-ugly to discourage but not prevent usage - see comment above
-    return r._getIRIter
+@coppertop(style=binary)
+def rMap(x, y):
+    return MapFR(x, y)
 
 @coppertop
 def rMaterialise(r):
@@ -129,7 +132,7 @@ def popBack(r):
 
 @coppertop
 def rReplaceWith(haystack, needle, replacement):
-    return haystack >> rEach >> (lambda e: replacement if e == needle else e)
+    return haystack >> rMap >> (lambda e: replacement if e == needle else e)
 
 
 
