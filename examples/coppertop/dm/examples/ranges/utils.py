@@ -25,11 +25,11 @@ def rChain(rs):
 
 @coppertop(style=binary)
 def rChunkUsing(r, f):
-    return nodes.ChunkUsing(r, f)
+    return nodes.EmitWhilesUsing(r, f)
 
 @coppertop(style=binary)
 def rChunkUsingSubRangeGeneratorFR(r, f):
-    return nodes.ChunkUsingSubRangeGeneratorFR(r, f)
+    return nodes.ChunkUsingSubRangeGenerator(r, f)
 
 @coppertop
 def rDrop(r, n):
@@ -45,7 +45,7 @@ def rExhaustInto(inR, outR):
         e = inR.front
         if isinstance(e, nodes.IIdxInf):
             raise TypeError('Infinite range encountered')
-        elif isinstance(e, nodes.IFwd):
+        elif isinstance(e, nodes.Simple):
             rExhaustInto(e, outR)
             if not inR.empty:  # the sub range may exhaust this range
                 inR.popFront()
@@ -96,7 +96,7 @@ def _materialise(r):
     answer = list()
     while not r.empty:
         e = r.front
-        if isinstance(e, nodes.IFwd) and not isinstance(e, nodes.IIdxInf):
+        if isinstance(e, nodes.Simple) and not isinstance(e, nodes.IIdxInf):
             answer.append(_materialise(e))
             if not r.empty:  # the sub range may exhaust this range
                 r.popFront()
@@ -146,20 +146,6 @@ def rWhile(r, fn, v):
     return nodes.While(r, fn, v)
 
 @coppertop
-def rZip(r):
-    raise NotYetImplemented()
-
-
-
-
-
-
-
-# **********************************************************************************************************************
-# buffer
-# **********************************************************************************************************************
-
-@coppertop
-def buffer(iter) -> pytuple:
-    return tuple(iter)
+def rZipRagged(ror):
+    return nodes.ZipRagged(ror)
 

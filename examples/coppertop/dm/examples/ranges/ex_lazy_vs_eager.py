@@ -22,7 +22,7 @@ def _ithDateBetween2(start, end, i):
 
 @coppertop(style=binary)
 def datesBetween2(start, end):
-     return _ithDateBetween2(start, end, _) >> to >> nodes.FnAdapterFR
+     return nodes.SrcUsing(_ithDateBetween2(start, end, _))
 
 @coppertop(style=binary)
 def datesBetweenEager2(start, end):

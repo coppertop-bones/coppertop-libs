@@ -11,7 +11,7 @@
 
 import os
 from coppertop.pipe import *
-from coppertop.dm.examples.ranges.nodes import FileLines, ListSink, IFwd
+from coppertop.dm.examples.ranges import nodes
 from coppertop.dm.examples.ranges.utils import rPut, rExhaustInto, rTarget
 from coppertop.dm.core.misc import getAttr
 from coppertop.dm.testing import check, equals
@@ -52,8 +52,8 @@ def countLinesTrad(f):
 
 
 def countLinesRanges1(f):
-    r = FileLines(f)
-    out = ListSink([])
+    r = nodes.FileLines(f)
+    out = nodes.ListSink()
 
     count = 0
     firstLineOfGroup = ''
@@ -74,8 +74,8 @@ def countLinesRanges1(f):
 
 
 def countLinesRanges2(f):
-    out = ListSink([])
-    r = FileLines(f)
+    out = nodes.ListSink()
+    r = nodes.FileLines(f)
     while not r.empty:
         count = r >> countEquals(_, firstLineOfGroup := r.front)
         out >> rPut >> (firstLineOfGroup, count)
@@ -93,14 +93,14 @@ def countEquals(r, value):
 
 
 def countLinesRanges3(f):
-    return FileLines(f) >> rRepititionCounts >> rExhaustInto >> ListSink([]) >> rTarget
+    return nodes.FileLines(f) >> rRepititionCounts >> rExhaustInto >> nodes.ListSink([]) >> rTarget
 
 
 @coppertop
 def rRepititionCounts(r):
     return RepititionCountIR(r)
 
-class RepititionCountIR(IFwd):
+class RepititionCountIR(nodes.Simple):
     def __init__(self, r):
         self.r = r
     @property
