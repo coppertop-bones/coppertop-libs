@@ -9,9 +9,9 @@
 
 import builtins
 
-from coppertop.pipe import *
 from bones.lang.types import _tv
 _snap = dir()
+from coppertop.pipe import *
 from coppertop.dm.core.types import num, index, txt, bool, litint, litnum, littxt, T1, T2, N, t
 
 true = _tv(bool, True)

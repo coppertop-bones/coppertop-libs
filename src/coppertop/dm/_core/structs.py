@@ -13,15 +13,22 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 import abc, numpy as np, typing
 from collections import UserList, UserDict
-from coppertop.pipe import fitsWithin
+from coppertop.pipe import fitsWithin, typeOf
+from coppertop.core import context, Missing, Void, NotYetImplemented, PathNotTested
 
-from bones.core.errors import NotYetImplemented, PathNotTested
-from bones.core.sentinels import Missing, Void
 from bones.ts.metatypes import BType, extractConstructors
 from bones.ts.core import Constructors
 
 
-__all__ = ['_tvarray', '_tvseq', '_tvmap', '_tvstruct', '_tvtuple', '_tvdate', '_tvtime', '_tvdatetime']
+__all__ = [
+    '_tvdate', '_tvtime', '_tvdatetime',
+    '_tvtuple', '_tvstruct',
+    '_tvseq', '_tvmap', '_tvarray',
+]
+
+
+# the tv structs implement common simple and container classes. As well as the expected public API they also implement
+# _t and _v so appear as boxes.
 
 
 
@@ -36,10 +43,11 @@ class _tvdatetime: pass
 
 
 # **********************************************************************************************************************
-# structs for implementing product types (each element has a specific known type)
+# product types (each element has a specific known type)
 # **********************************************************************************************************************
 
 class _tvtuple(list):
+    # we need to be able to assign into a slot so a Python list rather than a Python tuple (which is immutable)
     __slots__ = ['_t']
 
     def __new__(cls, *args_, **kwargs_):
@@ -261,7 +269,7 @@ class _tvstruct:
 
 
 # **********************************************************************************************************************
-# structs for implementing exponential types (elements are of same type) - _tvseq, _tvmap, _tvarray
+# exponential types (elements are of same type) - _tvseq, _tvmap, _tvarray
 # **********************************************************************************************************************
 
 class _tvseq(UserList):
@@ -334,7 +342,7 @@ class _tvmap(UserDict):
         constr, args = (args_[0][0], args_[1:]) if args_ and isinstance(args_[0], Constructors) else (Missing, args_)
         if len(args) == 0:
             if kwargs:
-                # dmap(a=1, b=2)
+                # xxx(a=1, b=2)
                 instance = super().__new__(cls)
                 instance.data = {}
                 instance._t = constr  # maybe use TBI in the future
@@ -342,7 +350,7 @@ class _tvmap(UserDict):
                 # raise PathNotTested()
                 return instance
             else:
-                # dmap()
+                # xxx()
                 instance = super().__new__(cls)
                 instance.data = {}
                 instance._t = constr  # maybe use TBI in the future
@@ -359,13 +367,13 @@ class _tvmap(UserDict):
                 else:
                     raise NotYetImplemented()
             elif isinstance(arg, (dict, list)):
-                # dmap(dict) or dmap(list)
+                # xxx(dict) or xxx(list of key value pairs)
                 instance = super().__new__(cls)
                 instance.data = dict(arg)
                 instance._t = constr
                 return instance
-            elif isinstance(arg, _tvmap):
-                # dmap(_tvmap)
+            elif isinstance(arg, (_tvmap, _tvstruct)):
+                # xxx(_tvmap) or xxx(_tvstruct)
                 instance = super().__new__(cls)
                 instance.data = dict(arg)
                 instance._t = constr
@@ -384,22 +392,21 @@ class _tvmap(UserDict):
                     instance.update(arg)
                     return instance
                 else:
-                    # dmap(t)
+                    # xxx(t, **kwargs)
+                    raise PathNotTested()
                     instance = super().__new__(cls)
                     instance.data = {}
                     instance._t = arg
-                    raise PathNotTested()
                     return instance
             elif isinstance(arg, BType):
-                # dmap(t, a=1, b=2)
+                # xxx(t, a=1, b=2)
                 instance = super().__new__(cls)
                 instance.data = {}
                 instance._t = arg
                 instance.update(kwargs)
                 return instance
             else:
-                raise PathNotTested()
-                raise SyntaxError(f'if kwargs are given and just one arg then it must be a BType - got {arg} instead')
+                raise NotYetImplemented(f'one arg of type {typeOf(arg)}')
         elif len(args) == 2:
             arg1, arg2 = args
             if not kwargs:
