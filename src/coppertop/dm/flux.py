@@ -12,7 +12,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 
 from coppertop.pipe import *
-from bones.core.errors import NotYetImplemented
+from coppertop.core import NotYetImplemented
 from coppertop.dm.core.types import pylist, T1, N, dseq
 
 

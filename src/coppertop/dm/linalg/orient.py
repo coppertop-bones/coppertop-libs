@@ -20,7 +20,7 @@
 import numpy as np
 
 from coppertop.pipe import *
-from bones.core.sentinels import Missing
+from coppertop.core import Missing
 from coppertop.dm.core.types import num, count, offset, matrix, N, darray
 from coppertop.dm.core.aggman import toDiag
 

@@ -8,8 +8,7 @@
 # **********************************************************************************************************************
 
 from coppertop.pipe import *
-from bones.core.errors import ProgrammerError, UnhappyWomble
-from bones.core.sentinels import Missing, Void
+from coppertop.core import ProgrammerError, UnhappyWomble, Missing, Void
 
 from coppertop.dm.core.types import void, pylist, pydict, dstruct
 import coppertop.dm.pmf

@@ -14,10 +14,9 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 import numpy as np, csv, pandas as pd, polars as pl
 
 from coppertop.pipe import *
-from coppertop.dm.core.types import dframe, void, pydict
+from coppertop.dm.core.types import dframe
 from coppertop.dm.core.aggman import array_
 from coppertop.dm.core.conv import to
-from bones.core.sentinels import Void
 
 
 pandaframe = pd.DataFrame

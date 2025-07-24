@@ -9,11 +9,10 @@
 
 from enum import IntEnum
 
-
+from coppertop.core import Missing
 from bones.ts.metatypes import BType
 import coppertop.dm.core.types
 from coppertop.dm.examples.cluedo.cards import *
-from bones.core.sentinels import Missing
 
 
 __all__ = [

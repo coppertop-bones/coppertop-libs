@@ -13,12 +13,11 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 import os, os.path, json, itertools, builtins, numpy as np, polars as pl
 
 from io import TextIOWrapper
+from coppertop.core import NotYetImplemented, Missing
 from coppertop.pipe import *
 from coppertop.dm.core.types import txt, pylist, dframe, dmap, pytuple, pyfunc, dtup, pydict, t as bt
 from coppertop.dm.core.text import strip
 from coppertop.dm.core.aggman import collect
-from bones.core.errors import NotYetImplemented
-from bones.core.sentinels import Missing
 from coppertop.dm.core.conv import to
 
 

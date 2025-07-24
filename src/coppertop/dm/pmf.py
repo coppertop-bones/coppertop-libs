@@ -22,10 +22,12 @@
 import operator, random, numpy as np, enum, scipy.stats, collections.abc
 
 from coppertop.pipe import *
-from bones.core.errors import NotYetImplemented
+from coppertop.core import NotYetImplemented
+
 from bones.ts.metatypes import BType
 from bones.lang.types import litstruct
 from bones.kernel.sym_manager import Sym
+
 from coppertop.dm.core.aggman import both, zipAll, values, keys, select, sort, kvs, collect, interleave, dropSlots, join
 from coppertop.dm.core.conv import to
 from coppertop.dm.core.misc import sequence

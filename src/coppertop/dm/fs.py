@@ -34,11 +34,11 @@
 
 
 from coppertop.pipe import *
+
 import coppertop.dm.pp
 from coppertop.dm.core import drop, startsWith
 import glob, os, shutil, datetime, sys, pathlib, stat
 from coppertop.dm.core.types import txt, bool
-from bones.core.sentinels import Missing
 from coppertop.dm.core.types import pylist
 from coppertop.dm.pp import JJ
 

@@ -16,8 +16,7 @@ import sys, builtins
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 from coppertop.pipe import *
-from bones.core.sentinels import Missing
-from bones.core.errors import ProgrammerError, NotYetImplemented
+from coppertop.core import Missing, ProgrammerError, NotYetImplemented
 from bones.ts.metatypes import BTAtom, BType, weaken, extractConstructors
 from bones.lang.types import *
 import bones.lang.types
@@ -467,9 +466,9 @@ __all__ += [
 
 def _init():
     # easiest way to keep namespace a little cleaner
-    import datetime
+    import datetime, types
     from coppertop.pipe import _btypeByClass
-    from bones.core.sentinels import dict_keys, dict_items, dict_values, function
+    from coppertop.core import dict_keys, dict_items, dict_values
 
     weaken(litint, (offset, num, count, index))
     weaken(pyint, (offset, num, count, index))
@@ -490,7 +489,7 @@ def _init():
         dict_keys: pydict_keys,
         dict_items: pydict_items,
         dict_values: pydict_values,
-        function: pyfunc,
+        types.FunctionType: pyfunc,
     })
 
 

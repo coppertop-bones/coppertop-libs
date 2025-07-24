@@ -8,8 +8,9 @@
 # **********************************************************************************************************************
 
 from coppertop.pipe import *
+from coppertop.core import Null
+
 from bones.ts.metatypes import BType
-from bones.core.sentinels import Null
 
 from coppertop.dm.core.types import txt, null
 from coppertop.dm.testing import check, equals

@@ -11,7 +11,7 @@
 import itertools, collections, numpy as np
 
 # bones imports
-from bones.core.sentinels import Missing, Null
+from coppertop.core import Missing, Null
 
 
 

@@ -10,11 +10,9 @@
 import sys
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
-import builtins, polars as pl
 from coppertop.pipe import *
-from bones.core.errors import NotYetImplemented, ProgrammerError
-from bones.core.sentinels import Missing
-from coppertop.dm.core.types import pylist, pytuple, pydict_keys, pydict_values, pyset, txt, t, offset, date, num
+from coppertop.core import ProgrammerError,  Missing
+from coppertop.dm.core.types import offset, date, num
 from coppertop.dm.core.datetime import addMonths
 
 import math

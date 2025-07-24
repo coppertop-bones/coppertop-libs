@@ -15,7 +15,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 
 import datetime
-from bones.core.sentinels import Missing
+
 from coppertop.pipe import *
 from coppertop.dm.core.types import txt, date, offset
 

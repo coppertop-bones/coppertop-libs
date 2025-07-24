@@ -11,11 +11,10 @@ import sys
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 
-import builtins, numpy as np
+import builtins, numpy as np, types
 
 from coppertop.pipe import *
-from bones.core.sentinels import Missing, dict_keys, dict_values, dict_items, function
-from bones.core.errors import NotYetImplemented
+from coppertop.core import dict_keys, dict_values, dict_items
 from bones.ts.metatypes import BTAtom as _BTAtom
 from coppertop.dm.core.aggman import inject
 from bones.lang.types import _tv
@@ -81,7 +80,7 @@ def sequenceStep(p1, p2, step):
     return list(np.arange(first, last + step, step))
 
 @coppertop
-def gather(x:function):
+def gather(x:types.FunctionType) -> pyfunc:
     return x()
 
 @coppertop

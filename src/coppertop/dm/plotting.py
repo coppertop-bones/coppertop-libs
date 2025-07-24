@@ -10,12 +10,12 @@
 import plotnine, numpy as np, statsmodels.api as sm, seaborn as sns
 
 from coppertop.pipe import *
+from coppertop.core import Void
 from coppertop.dm.pandaframe import pandaframe
 from coppertop.dm.p9 import P9
 from coppertop.dm.core.aggman import atCol
 from coppertop.dm.core.types import matrix, N, num, void, pydict
 from coppertop.dm.core.structs import darray
-from bones.core.sentinels import Void
 from coppertop.dm.core.conv import to
 
 

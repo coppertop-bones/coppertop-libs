@@ -11,8 +11,8 @@ import sys
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 from coppertop.pipe import *
-from bones.core.errors import NotYetImplemented
-from bones.ts.metatypes import BType, BTUnion
+from coppertop.core import NotYetImplemented
+
 _snap = dir()
 from coppertop.dm.core.types import litint, litnum, num, count as tCount, err, T, T1, T2, index, txt, btype, pytype
 

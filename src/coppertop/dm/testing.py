@@ -8,14 +8,15 @@
 # **********************************************************************************************************************
 
 import sys
+import types
+
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
-import traceback
-from bones.core.context import context
+import traceback, builtins
+from coppertop.core import context
 from bones import jones
 from coppertop.pipe import *
 from coppertop.dm.core.types import pytuple
-from bones.core.sentinels import function
 from coppertop.dm.core.comparisons import *
 
 # OPEN: allow nullary >> unary etc
@@ -26,7 +27,7 @@ def check(actual, fn, expected):
     with context(showFullType=False):
         isPartial = isinstance(fn, jones._pfn)
         isPyFuncWithSoleArg = False
-        expectedIsFn = isinstance(expected, (function, jones._fn, jones._pfn))
+        expectedIsFn = isinstance(expected, (types.FunctionType, jones._fn, jones._pfn))
         # could check that the partial isn't piping
         if (fnName in ('type', 'typeOf')) or (isPartial and fn.o_tbc == 1 and not expectedIsFn) or isPyFuncWithSoleArg:
             # fn is an F1

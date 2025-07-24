@@ -14,7 +14,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 __all__ = ['ensurePath', 'printModules', 'unload', 'reload']
 
 from importlib import reload
-from bones.core.sentinels import Void
+from coppertop.core import Void
 
 
 class _callFReturnX:

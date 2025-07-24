@@ -16,9 +16,7 @@
 
 import sys, logging, traceback, ast, datetime
 from coppertop.pipe import *
-from bones.core.utils import HookStdOutErrToLines
-from bones.core.sentinels import Missing, Void
-from bones.core.errors import ProgrammerError
+from coppertop.core import HookStdOutErrToLines, Missing, Void, ProgrammerError
 from bones.kernel.errors import BonesError
 from ipykernel.kernelbase import Kernel
 from bones.kernel.core import BonesKernel

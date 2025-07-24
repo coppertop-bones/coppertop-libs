@@ -13,7 +13,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 import csv
 
 from coppertop.pipe import *
-from bones.core.sentinels import Missing
+from coppertop.core import Missing
 from coppertop.dm.core.types import dframe, txt, pydict, dtup
 
 

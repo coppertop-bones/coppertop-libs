@@ -15,7 +15,7 @@ import numpy as np, datetime, builtins
 from _strptime import _strptime
 
 from coppertop.pipe import *
-from bones.core.errors import NotYetImplemented
+from coppertop.core import NotYetImplemented
 from bones.ts.metatypes import BType
 from coppertop.dm.core.datetime import toCTimeFormat
 from coppertop.dm.core.types import dframe, dmap, txt, pylist, pydict, T, T1, T2, N, pytuple, pydict_keys, pydict_values, \

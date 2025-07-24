@@ -27,10 +27,9 @@ import builtins, numpy as np, collections.abc
 from coppertop.pipe import *
 from bones import jones
 
-from bones.core.errors import NotYetImplemented, ProgrammerError
+from coppertop.core import NotYetImplemented, ProgrammerError, Void
 from bones.ts.metatypes import hasT, fitsWithin
 from bones.lang.types import _tv
-from bones.core.sentinels import Void
 
 from coppertop.dm.core.types import pylist, pydict, pytuple, pydict_keys, pydict_items, pydict_values, pyfunc, pyset, \
     T1, T2, T3, T4, T5, T6, txt, t, index, offset, N, dstruct, dtup, dseq, void, dmap, dframe, matrix, num, py, \
