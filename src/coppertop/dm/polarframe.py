@@ -12,7 +12,8 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 import builtins, polars as pl
 from coppertop.pipe import *
-from coppertop.dm.core.types import pylist, pytuple, pydict_keys, pydict_values, pyset, txt, t, offset, matrix, darray
+from coppertop.dm.core.types import pylist, pytuple, pydict_keys, pydict_values, pyset, txt, t, offset, matrix, darray, \
+    pydict
 
 
 
@@ -49,6 +50,41 @@ def at(df:pl.DataFrame, k:txt):
 @coppertop(style=binary)
 def at(df:pl.DataFrame, o:offset):
     return df.row(o)
+
+
+# **********************************************************************************************************************
+# colNames
+# **********************************************************************************************************************
+
+@coppertop
+def colNames(df:pl.DataFrame) -> pylist:
+    return df.columns
+
+
+# **********************************************************************************************************************
+# conv
+# **********************************************************************************************************************
+
+@coppertop
+def conv(f:pl.DataFrame, conversions:pydict) -> pl.DataFrame:
+    for n, conversion in conversions.items():
+        f = f.with_columns(conversion(pl.col(n)))
+    return f
+
+
+# **********************************************************************************************************************
+# diffRows
+# **********************************************************************************************************************
+
+@coppertop
+def diffRows(f: pl.DataFrame) -> pl.DataFrame:
+    """
+    Returns a DataFrame containing the differences between consecutive rows.
+    """
+    numericCols = f.select(pl.selectors.numeric())
+    for n, c in zip(numericCols.columns, numericCols):
+        f = f.with_columns(pl.col(n).diff(1))
+    return f
 
 
 # **********************************************************************************************************************
@@ -95,15 +131,6 @@ def first(f: pl.DataFrame) -> pl.DataFrame:
 @coppertop
 def firstLast(f: pl.DataFrame) -> pl.DataFrame:
     return f[[1, -1]]
-
-
-# **********************************************************************************************************************
-# keys
-# **********************************************************************************************************************
-
-@coppertop
-def keys(df:pl.DataFrame) -> pylist:
-    return df.columns
 
 
 # **********************************************************************************************************************
@@ -156,22 +183,35 @@ def numRows(df:pl.DataFrame) -> t.count:
 
 @coppertop
 def read(path:txt) -> pl.DataFrame:
-    return pl.read_csv(path, parse_dates=True)
+    return pl.read_csv(path, try_parse_dates=True)
 
 
 # **********************************************************************************************************************
 # rename
 # **********************************************************************************************************************
 
-@coppertop(style=ternary)
+@coppertop
+def rename(f:pl.DataFrame, newByOld:pydict) -> pl.DataFrame:
+    return f.rename(newByOld)
+
+@coppertop
 def rename(f:pl.DataFrame, old:pylist+pytuple+pydict_keys+pydict_values, new:pylist+pytuple+pydict_keys+pydict_values) -> pl.DataFrame:
     oldNew = dict(builtins.zip(old, new))
     return f.rename(oldNew)
 
-@coppertop(style=ternary)
+@coppertop
 def rename(f:pl.DataFrame, old:txt, new:txt) -> pl.DataFrame:
     oldNew = {old:new}
     return f.rename(oldNew)
+
+
+# **********************************************************************************************************************
+# schema
+# **********************************************************************************************************************
+
+@coppertop
+def schema(df:pl.DataFrame) -> pl.Schema:
+    return df.schema
 
 
 # **********************************************************************************************************************
@@ -213,12 +253,44 @@ def takePanel(f: pl.DataFrame) -> matrix&darray:
 
 
 # **********************************************************************************************************************
+# to
+# **********************************************************************************************************************
+
+@coppertop(style=binary)
+def to(col: pl.Expr, t:pl.DataTypeClass) -> pl.Expr:
+    """
+    Answers a polars Expr to cast to the given type.
+    See https://docs.pola.rs/api/python/dev/reference/expressions/api/polars.Expr.cast.html#polars.Expr.cast
+    """
+    return col.cast(t)
+
+@coppertop(style=binary)
+def to(col: pl.Expr, t, format: txt) -> pl.Expr:
+    """
+    Answers a polars Expr to cast to the given type using the format.
+    See https://docs.pola.rs/api/python/dev/reference/expressions/api/polars.Expr.cast.html#polars.Expr.cast
+    """
+    if t == pl.Date:
+        return col.str.to_date(format=format)
+    elif t == pl.Datetime:
+        return col.str.to_datetime(format=format)
+    elif t == pl.Time:
+        return col.str.to_time(format=format)
+    else:
+        raise TypeError(f"Got a {t} for t but only support pl.Date, pl.Datetime, and pl.Time.")
+
+
+# **********************************************************************************************************************
 # where
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
 def where(f:pl.DataFrame, pred:pl.Expr) -> pl.DataFrame:
     return f.filter(pred)
+
+@coppertop(style=binary)
+def where(f:pl.DataFrame, fn) -> pl.DataFrame:
+    return f.filter([fn(d) for d in f.to_dicts()])
 
 
 # **********************************************************************************************************************

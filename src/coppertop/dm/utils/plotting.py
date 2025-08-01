@@ -12,10 +12,9 @@ import plotnine, numpy as np, statsmodels.api as sm, seaborn as sns
 from coppertop.pipe import *
 from coppertop.core import Void
 from coppertop.dm.pandaframe import pandaframe
-from coppertop.dm.p9 import P9
 from coppertop.dm.core.aggman import atCol
 from coppertop.dm.core.types import matrix, N, num, void, pydict
-from coppertop.dm.core.structs import darray
+from coppertop.dm.core import darray
 from coppertop.dm.core.conv import to
 
 
@@ -23,13 +22,13 @@ array_ = (N**num)&darray
 matrix_ = matrix&darray
 
 @coppertop
-def scatter(F:matrix_) -> P9:
+def scatter(F:matrix_) -> plotnine.ggplot:
     df = pandaframe({
         'X':  F >> atCol >> 0 >> to >> array_,
         'Y':  F >> atCol >> 1 >> to >> array_
     })
     p = plotnine.ggplot(df, plotnine.aes(x='X', y='Y')) + plotnine.geom_point()
-    return p | P9
+    return p
 
 
 @coppertop
@@ -52,3 +51,8 @@ def _correlogram(pdf:pandaframe, kind="reg", diag_kind='kde') -> void:
         diag_kind="kde"
     )
     return Void
+
+@coppertop
+def PP(p:plotnine.ggplot):
+    fig = p.draw(show=True)
+    return p

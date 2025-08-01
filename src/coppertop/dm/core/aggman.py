@@ -1383,13 +1383,13 @@ def prependTo(x:T1, xs:(N**T1)&dseq) -> (N**T1)&dseq:
 # rename
 # **********************************************************************************************************************
 
-@coppertop(style=ternary)
+@coppertop
 def rename(d:pydict, old, new):
     d = dict(d)
     d[new] = d.pop(old)
     return d
 
-@coppertop(style=ternary)
+@coppertop
 def rename(d:dmap, old, new):
     d = dmap(d)
     d[new] = d._pop(old)

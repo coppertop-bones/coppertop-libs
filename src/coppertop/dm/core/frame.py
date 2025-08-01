@@ -305,11 +305,11 @@ def range_(colName:txt) -> DefRange:
 # rename
 # **********************************************************************************************************************
 
-@coppertop(style=ternary)
+@coppertop
 def rename(f:dframe, old:pylist+pytuple+pydict_keys+pydict_values, new:pylist+pytuple+pydict_keys+pydict_values) -> dframe:
     raise NotYetImplemented()
 
-@coppertop(style=ternary)
+@coppertop
 def rename(f:dframe, old:txt, new:txt) -> dframe:
     raise NotYetImplemented()
 
