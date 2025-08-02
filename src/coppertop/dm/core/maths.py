@@ -12,7 +12,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 import numpy as np, math
 
-from coppertop.core import NotYetImplemented
+from coppertop.utils import NotYetImplemented
 from coppertop.pipe import *
 from coppertop.dm.core.types import T1, pylist, N, num, matrix, t, pyset, pytuple, T, darray
 from coppertop.dm.core.aggman import count

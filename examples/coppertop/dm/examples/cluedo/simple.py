@@ -8,7 +8,7 @@
 # **********************************************************************************************************************
 
 from coppertop.pipe import *
-from coppertop.core import ProgrammerError, UnhappyWomble, Missing, Void
+from coppertop.utils import ProgrammerError, UnhappyWomble, Missing, Void
 
 from coppertop.dm.core.types import void, pylist, pydict, dstruct
 import coppertop.dm.pmf

@@ -13,7 +13,7 @@ import types
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 import traceback, builtins
-from coppertop.core import context
+from coppertop.utils import context
 from bones import jones
 from coppertop.pipe import *
 from coppertop.dm.core.types import pytuple

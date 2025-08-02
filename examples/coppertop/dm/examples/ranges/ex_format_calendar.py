@@ -115,7 +115,7 @@
 import datetime, pytest
 skip = pytest.mark.skip
 
-from coppertop.core import Null
+from coppertop.utils import Null
 from coppertop.pipe import *
 from coppertop.dm.core import count, joinAll, collect, interleave, pad, strip, to, day, weekday, weekdayName, \
     monthLongName, addDays, toCTimeFormat, parseDate, not_

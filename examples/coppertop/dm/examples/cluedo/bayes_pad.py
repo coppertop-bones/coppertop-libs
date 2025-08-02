@@ -9,7 +9,7 @@
 
 import numpy as np, time
 from coppertop.pipe import *
-from coppertop.core import Missing, context
+from coppertop.utils import Missing, context
 from coppertop.dm.core.types import pylist, num
 from coppertop.dm.examples.cluedo.core import HasOne, NS_TO_S
 from coppertop.dm.examples.cluedo.utils import cardIds

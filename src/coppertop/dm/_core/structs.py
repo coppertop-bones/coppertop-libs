@@ -14,7 +14,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 import abc, numpy as np, typing
 from collections import UserList, UserDict
 from coppertop.pipe import fitsWithin, typeOf
-from coppertop.core import context, Missing, Void, NotYetImplemented, PathNotTested
+from coppertop.utils import context, Missing, Void, NotYetImplemented, PathNotTested
 
 from bones.ts.metatypes import BType, extractConstructors
 from bones.ts.core import Constructors
@@ -51,14 +51,19 @@ class _tvtuple(list):
     __slots__ = ['_t']
 
     def __new__(cls, *args_, **kwargs_):
-        constr, args, kwargs = extractConstructors(args_, kwargs_)
-        if len(args) == 2:
-            t, v = args
-            instance = super().__new__(cls, v)
-            instance._t = t
-            instance._init(v)
-            return instance
-        raise SyntaxError()
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if constrs:
+            if len(constrs) != 1: raise NotYetImplemented()
+            constr = constrs[0]
+            if len(args) == 2:
+                t, v = args
+                instance = super().__new__(cls, v)
+                instance._t = t
+                instance._init(v)
+                return instance
+            raise SyntaxError()
+        else:
+            raise NotYetImplemented()
 
     def _init(self, v):
         super().__init__(v)
@@ -276,32 +281,42 @@ class _tvseq(UserList):
     __slots__ = ['_t', 'data']
 
     def __init__(self, *args_, **kwargs_):
-        constr, args, kwargs = extractConstructors(args_, kwargs_)
-        if len(args) == 1:
-            arg = args[0]
-            if isinstance(arg, _tvseq):
-                # dseq(dseq)
-                super().__init__(arg._v)
-                self._t = arg._t
-            elif isinstance(arg, BType):
-                # dseq(<BType>)
-                super().__init__()
-                self._t = arg
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if constrs:
+            if len(constrs) != 1: raise NotYetImplemented()
+            constr = constrs[0]
+            if len(args) == 1:
+                arg = args[0]
+                if isinstance(arg, _tvseq):
+                    # dseq(dseq)
+                    super().__init__(arg._v)
+                    self._t = arg._t
+                elif isinstance(arg, BType):
+                    # dseq(<BType>)
+                    super().__init__()
+                    self._t = arg
+                else:
+                    raise TypeError("Can't create dseq without type information")
+            elif len(args) == 2:
+                # dseq(t, iterable)
+                arg1, arg2 = args
+                super().__init__(arg2)
+                self._t = arg1
+            elif len(args) == 3:
+                # dseq(dseq, t, iterable)
+                arg1, arg2, arg3 = args
+                assert isinstance(arg1, Constructors)
+                super().__init__(arg3)
+                self._t = arg2
             else:
-                raise TypeError("Can't create dseq without type information")
-        elif len(args) == 2:
-            # dseq(t, iterable)
-            arg1, arg2 = args
-            super().__init__(arg2)
-            self._t = arg1
-        elif len(args) == 3:
-            # dseq(dseq, t, iterable)
-            arg1, arg2, arg3 = args
-            assert isinstance(arg1, Constructors)
-            super().__init__(arg3)
-            self._t = arg2
+                raise TypeError("Invalid arguments to _tvseq constructor")
         else:
-            raise TypeError("Invalid arguments to _tvseq constructor")
+            if len(args) == 2:
+                t, v = args
+                super().__init__(v)
+                self._t = t
+            else:
+                raise NotYetImplemented()
 
     @property
     def _v(self):
@@ -483,31 +498,36 @@ class _nd(np.ndarray):
 class _tvarray(_nd):
 
     def __new__(cls, *args_, **kwargs_):
-        constr, args, kwargs = extractConstructors(args_, kwargs_)
-        if len(args) == 0:
-            # we have a null tuple
-            raise NotYetImplemented()
-        elif len(args) == 1:
-            if t:
-                instance = np.asarray(args[0], **kwargs).view(cls)
-                instance._t_ = t
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if constrs:
+            if len(constrs) != 1: raise NotYetImplemented()
+            constr = constrs[0]
+            if len(args) == 0:
+                # we have a null tuple
+                raise NotYetImplemented()
+            elif len(args) == 1:
+                if t:
+                    instance = np.asarray(args[0], **kwargs).view(cls)
+                    instance._t_ = t
+                else:
+                    raise SyntaxError()
+            elif len(args) == 2:
+                arg1, arg2 = args
+                if isinstance(arg1, BType):
+                    # darray(t, iterable)
+                    try:
+                        instance = np.asarray(arg2, **kwargs).view(cls)
+                        instance._t_ = arg1
+                    except Exception as ex:
+                        print(f'{arg1}    {arg2} {ex}')
+                        raise ex
+                else:
+                    raise SyntaxError()
             else:
                 raise SyntaxError()
-        elif len(args) == 2:
-            arg1, arg2 = args
-            if isinstance(arg1, BType):
-                # darray(t, iterable)
-                try:
-                    instance = np.asarray(arg2, **kwargs).view(cls)
-                    instance._t_ = arg1
-                except Exception as ex:
-                    print(f'{arg1}    {arg2} {ex}')
-                    raise ex
-            else:
-                raise SyntaxError()
+            return instance
         else:
-            raise SyntaxError()
-        return instance
+            raise NotYetImplemented()
 
     def __array_finalize__(self, instance):
         # see - https://numpy.org/doc/stable/user/basics.subclassing.html

@@ -12,7 +12,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 from coppertop._scopes import _ContextualScopeManager, _MutableContextualScope, _CoWScope, ANON_NAME
 from coppertop.pipe import *
-from coppertop.core import NotYetImplemented, CPTBError, Missing
+from coppertop.utils import NotYetImplemented, CPTBError, Missing
 from coppertop.dm.core.types import txt
 
 

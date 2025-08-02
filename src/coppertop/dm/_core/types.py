@@ -7,16 +7,17 @@
 # License. See the NOTICE file distributed with this work for additional information regarding copyright ownership.
 # **********************************************************************************************************************
 
-# a collection of usual types that aren't essential to the language
+import sys
+if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
+
+
+# a collection of usual types that aren't essential to the bones language
 # in bones types can have constructors associated with them - so we have some classes embedded in the types module
 # more for convenience and ease of understanding the module structure rather than anything deeper
 
-
-import sys, builtins
-if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
-
+import builtins, numpy as np
 from coppertop.pipe import *
-from coppertop.core import Missing, ProgrammerError, NotYetImplemented
+from coppertop.utils import Missing, ProgrammerError, NotYetImplemented, ImpossiblePathError
 from bones.ts.metatypes import BTAtom, BType, weaken, extractConstructors
 from bones.lang.types import *
 import bones.lang.types
@@ -61,8 +62,25 @@ __all__ += ['bool']
 
 class num_(float):
     # unboxed float
-    def __new__(cls, t, v, *args, **kwargs):
-        return super(cls, cls).__new__(cls, v)
+    def __new__(cls, *args_, **kwargs_):
+        if not args_: raise SyntaxError(f'Needs arguments, got {args_}')
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if constrs:
+            if len(constrs) == 1:
+                t = constrs[0]
+                if len(args) != 1: raise SyntaxError(f'{t}(...) expected 1 argument, got {args}')
+                if not fitsWithin(t, num): raise TypeError(f'Expected a type derived from num, got {t}')
+                return super(cls, cls).__new__(cls, args[0])
+            else:
+                raise NotYetImplemented()
+        else:
+            if len(args) == 2:
+                t, v = args
+                # OPEN: do some type checking here
+                instance = super(cls, cls).__new__(cls, v)
+                return instance
+            else:
+                raise SyntaxError(f'| {args[0]} 1 argument, got {len(args)}')
     @property
     def _t(self):
         return num
@@ -70,18 +88,23 @@ class num_(float):
         return self
     def __repr__(self):
         return f'{super().__repr__()}'
-num = BType('num: num & f64 in mem').setCoercer(num_)
+num = BType('num: num & f64 in mem').setCoercer(num_).setConstructor(num_)
 __all__ += ['num']
 
 
 class tvfloat_(float):
     # a boxed float
-    def __new__(cls, *args_, **kwargs):
-        constr, args = (args_[0][0], args_[1:]) if args_ and isinstance(args_[0], Constructors) else (Missing, args_)
-        t, v = args
-        instance = super(cls, cls).__new__(cls, v)
-        instance._t_ = t
-        return instance
+    def __new__(cls, *args_, **kwargs_):
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if constrs:
+            if len(constrs) != 1: raise NotYetImplemented()
+            constr = constrs[0]
+            t, v = args
+            instance = super(cls, cls).__new__(cls, v)
+            instance._t_ = t
+            return instance
+        else:
+            raise NotYetImplemented()
     @property
     def _v(self):
         return super().__new__(float, self)
@@ -93,7 +116,7 @@ class tvfloat_(float):
     def _asT(self, t):
         self._t_ = t
         return self
-tvfloat = BType('tvfloat: tvfloat & f64 in mem').setConstructor(tvfloat_)
+tvfloat = BType('tvfloat: tvfloat & f64 in mem').setConstructor(tvfloat_).setCoercer(tvfloat_)
 __all__ += ['tvfloat']
 
 
@@ -209,16 +232,21 @@ __all__ += ['tvint']
 
 class _tvstr(builtins.str):
     def __new__(cls, *args_, **kwargs_):
-        constr, args, kwargs = extractConstructors(args_, kwargs_)
-        if len(args) == 0:
-            raise NotYetImplemented()
-        elif len(args) == 1:
-            instance = super(cls, cls).__new__(cls, args[0])
-            if constr != txt:
-                instance._t_ = constr
-            return instance
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if constrs:
+            if len(constrs) != 1: raise NotYetImplemented()
+            constr = constrs[0]
+            if len(args) == 0:
+                raise NotYetImplemented()
+            elif len(args) == 1:
+                instance = super(cls, cls).__new__(cls, args[0])
+                if constr != txt:
+                    instance._t_ = constr
+                return instance
+            else:
+                raise SyntaxError(f'Expected 1 argument, got {len(args)}')
         else:
-            raise SyntaxError(f'Expected 1 argument, got {len(args)}')
+            raise ImpossiblePathError()
     @property
     def _t(self):
         return getattr(self, '_t_', txt)  # default to txt if not set
@@ -288,27 +316,30 @@ pytuple = BType('pytuple: pytuple & py in mem').setCoercer(coercer)
 
 pydict = BType('pydict: pydict & py in mem').setCoercer(coercer)
 def _pydictCons(*args_, **kwargs_) -> pydict:
-    constr, args, kwargs = extractConstructors(args_, kwargs_)
-    if len(args) == 0:
-        return dict()
-    elif len(args) == 1:
-        arg = args[0]
-        if isinstance(arg, tuple):     # a pair of ks and values
-            if len(arg) == 2:
-                ks, vs = arg
-                assert len(ks) == len(vs), f'Keys and values must be the same length, got {len(ks)} and {len(vs)}'
-                return dict(zip(ks, vs))
-            else:
-                raise NotYetImplemented()
-        return dict(arg)
-    elif len(args) == 2:
-        ks, vs = args[0]
-        return dict(zip(ks, vs))
+    constrs, args, kwargs = extractConstructors(args_, kwargs_)
+    if constrs:
+        if len(constrs) != 1: raise NotYetImplemented()
+        constr = constrs[0]
+        if len(args) == 0:
+            return dict()
+        elif len(args) == 1:
+            arg = args[0]
+            if isinstance(arg, tuple):     # a pair of ks and values
+                if len(arg) == 2:
+                    ks, vs = arg
+                    assert len(ks) == len(vs), f'Keys and values must be the same length, got {len(ks)} and {len(vs)}'
+                    return dict(zip(ks, vs))
+                else:
+                    raise NotYetImplemented()
+            return dict(arg)
+        elif len(args) == 2:
+            ks, vs = args[0]
+            return dict(zip(ks, vs))
+        else:
+            raise NotYetImplemented()
+        return dict(args[0])
     else:
-        raise NotYetImplemented()
-
-
-    return dict(args[0])
+        raise ImpossiblePathError()
 pydict.setConstructor(_pydictCons)
 
 pyset = BType('pyset: pyset & py in mem').setCoercer(coercer)
@@ -455,8 +486,11 @@ dframe = BType('dframe: dframe & frame & py in mem').setConstructor(createDFrame
 #     def __
 
 
+pyndarray = BType('pyndarray: pyndarray & py in mem')
+
+
 __all__ += [
-    'dtup', 'dstruct', 'dseq', 'dmap', 'dframe', 'darray'
+    'dtup', 'dstruct', 'dseq', 'dmap', 'dframe', 'darray', 'pyndarray'
 ]
 
 __all__ += [
@@ -468,7 +502,7 @@ def _init():
     # easiest way to keep namespace a little cleaner
     import datetime, types
     from coppertop.pipe import _btypeByClass
-    from coppertop.core import dict_keys, dict_items, dict_values
+    from coppertop.utils.types import dict_keys, dict_items, dict_values
 
     weaken(litint, (offset, num, count, index))
     weaken(pyint, (offset, num, count, index))
@@ -490,6 +524,7 @@ def _init():
         dict_items: pydict_items,
         dict_values: pydict_values,
         types.FunctionType: pyfunc,
+        np.ndarray: pyndarray,
     })
 
 

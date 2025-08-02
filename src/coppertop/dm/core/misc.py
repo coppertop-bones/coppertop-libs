@@ -14,7 +14,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 import builtins, numpy as np, types
 
 from coppertop.pipe import *
-from coppertop.core import dict_keys, dict_values, dict_items
+from coppertop.utils.types import dict_keys, dict_values, dict_items
 from bones.ts.metatypes import BTAtom as _BTAtom
 from coppertop.dm.core.aggman import inject
 from bones.lang.types import _tv

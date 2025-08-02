@@ -8,7 +8,7 @@
 # **********************************************************************************************************************
 
 from coppertop.pipe import *
-from coppertop.core import Null
+from coppertop.utils import Null
 
 from bones.ts.metatypes import BType
 

@@ -11,7 +11,7 @@ import sys
 if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 from coppertop.pipe import *
-from coppertop.core import ProgrammerError,  Missing
+from coppertop.utils import ProgrammerError,  Missing
 from coppertop.dm.core.types import offset, date, num
 from coppertop.dm.core.datetime import addMonths
 

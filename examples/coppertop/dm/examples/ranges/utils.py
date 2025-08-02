@@ -13,7 +13,7 @@
 
 from coppertop.pipe import *
 from bones.ts.metatypes import BTUnion
-from coppertop.core import NotYetImplemented
+from coppertop.utils import NotYetImplemented
 from coppertop.dm.core.types import pylist
 from coppertop.dm.examples.ranges import nodes
 from coppertop.dm.core.types import pytuple

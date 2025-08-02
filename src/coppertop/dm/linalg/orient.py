@@ -20,7 +20,7 @@
 import numpy as np
 
 from coppertop.pipe import *
-from coppertop.core import Missing
+from coppertop.utils import Missing
 from coppertop.dm.core.types import num, count, offset, matrix, N, darray
 from coppertop.dm.core.aggman import toDiag
 

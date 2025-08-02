@@ -10,7 +10,7 @@
 import plotnine, numpy as np, statsmodels.api as sm, seaborn as sns
 
 from coppertop.pipe import *
-from coppertop.core import Void
+from coppertop.utils import Void
 from coppertop.dm.pandaframe import pandaframe
 from coppertop.dm.core.aggman import atCol
 from coppertop.dm.core.types import matrix, N, num, void, pydict

@@ -12,7 +12,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 
 from coppertop.pipe import *
-from coppertop.core import Missing
+from coppertop.utils import Missing
 from coppertop.dm.core.types import pylist, pytuple, pydict, txt, index, bool
 
 

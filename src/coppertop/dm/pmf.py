@@ -22,7 +22,7 @@
 import operator, random, numpy as np, enum, scipy.stats, collections.abc
 
 from coppertop.pipe import *
-from coppertop.core import NotYetImplemented
+from coppertop.utils import NotYetImplemented
 
 from bones.ts.metatypes import BType
 from bones.lang.types import litstruct

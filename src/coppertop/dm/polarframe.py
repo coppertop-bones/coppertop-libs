@@ -12,8 +12,31 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 import builtins, polars as pl
 from coppertop.pipe import *
+from coppertop.utils import NotYetImplemented, ImpossiblePathError
+from bones.ts.metatypes import BType, extractConstructors
 from coppertop.dm.core.types import pylist, pytuple, pydict_keys, pydict_values, pyset, txt, t, offset, matrix, darray, \
-    pydict
+    pydict, index
+
+
+polarframe = BType('polarframe: polarframe & py in mem')
+polarseries = BType('polarseries: polarseries & py in mem')
+
+
+def _conPolarframe(f:pl.DataFrame) -> polarframe:
+    """
+    Coerce a polars DataFrame to a polarframe.
+    """
+    def __new__(cls, *args_, **kwargs_):
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if constrs:
+            if len(constrs) != 1: raise NotYetImplemented()
+            constr = constrs[0]
+            raise NotYetImplemented()
+        else:
+            raise ImpossiblePathError()
+
+
+    return polarframe(f)
 
 
 
@@ -36,7 +59,7 @@ def aj(f1:pl.DataFrame, f2:pl.DataFrame, k1:txt, k2:txt, direction:txt):
 
 @coppertop(style=unary)
 def asc(f:pl.DataFrame) -> pl.DataFrame:
-    return f.sort(by=f >> keys >> at >> 0)
+    return f.sort(by=f >> colNames >> at >> 0)
 
 
 # **********************************************************************************************************************
@@ -48,8 +71,20 @@ def at(df:pl.DataFrame, k:txt):
     return df.get_column(k)
 
 @coppertop(style=binary)
-def at(df:pl.DataFrame, o:offset):
-    return df.row(o)
+def at(df:pl.DataFrame, o:offset) -> pydict:
+    return df.row(o, named=True)
+
+@coppertop(style=binary)
+def at(df:pl.DataFrame, i:index) -> pydict:
+    return df.row(i - 1, named=True)
+
+@coppertop(style=binary)
+def at(s:pl.Series, o:offset):
+    return s[o]
+
+@coppertop(style=binary)
+def at(s:pl.Series, i:index):
+    return s[i - 1]
 
 
 # **********************************************************************************************************************
@@ -103,11 +138,8 @@ def drop(f: pl.DataFrame, k:txt) -> pl.DataFrame:
     return f.drop(k)
 
 @coppertop(style=binary)
-def drop(f: pl.DataFrame, k:txt) -> pl.DataFrame:
-    return f.drop(k)
-
-@coppertop(style=binary)
 def drop(f: pl.DataFrame, ks:pylist) -> pl.DataFrame:
+    # OPEN: distinguish between a list of ints and a list of txt
     return f.drop(ks)
 
 
@@ -130,6 +162,10 @@ def first(f: pl.DataFrame) -> pl.DataFrame:
 
 @coppertop
 def firstLast(f: pl.DataFrame) -> pl.DataFrame:
+    return f[[1, -1]]
+
+@coppertop
+def firstLast(f: pl.Series) -> pl.Series:
     return f[[1, -1]]
 
 

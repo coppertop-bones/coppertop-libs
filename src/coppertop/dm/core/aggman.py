@@ -25,9 +25,10 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 import builtins, numpy as np, collections.abc
 
 from coppertop.pipe import *
+from coppertop.utils.types import dict_keys, dict_values
 from bones import jones
 
-from coppertop.core import NotYetImplemented, ProgrammerError, Void
+from coppertop.utils import NotYetImplemented, ProgrammerError, Void
 from bones.ts.metatypes import hasT, fitsWithin
 from bones.lang.types import _tv
 
@@ -35,9 +36,6 @@ from coppertop.dm.core.types import pylist, pydict, pytuple, pydict_keys, pydict
     T1, T2, T3, T4, T5, T6, txt, t, index, offset, N, dstruct, dtup, dseq, void, dmap, dframe, matrix, num, py, \
     darray
 
-
-dict_keys = type({}.keys())
-dict_values = type({}.values())
 
 array_ = (N**num) & darray
 matrix_ = matrix & darray

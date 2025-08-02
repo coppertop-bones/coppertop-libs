@@ -13,11 +13,13 @@ from enum import Enum
 
 from collections import namedtuple
 from coppertop.pipe import *
-from coppertop.core import Missing, list_iter
+from coppertop.utils import Missing
 from coppertop.dm.core.aggman import collect, interleave, kvs
 from coppertop.dm.core.types import txt, pyfunc, T
 
 __all__ = []
+
+list_iter = type(iter([]))
 
 
 @coppertop

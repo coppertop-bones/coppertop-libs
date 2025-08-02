@@ -29,7 +29,7 @@ Alternatively, you can manually set `sys.path` to include the coppertop-bones/sr
 notebook you can do the following:
 
 ```
-from coppertop.core import ensurePath
+from coppertop.utils import ensurePath
 '/Users/david/repos/github/coppertop-bones/coppertop-libs/src' >> ensurePath       # <= set this to your path
 ```
 
