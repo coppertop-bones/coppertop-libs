@@ -14,6 +14,7 @@ import builtins, numpy as np
 
 from coppertop.pipe import *
 from coppertop.dm.core.types import T1, T2, pylist, N, num, matrix, darray
+from coppertop.dm.core.conv import to
 
 
 
@@ -27,28 +28,28 @@ matrix_ = matrix&darray
 # **********************************************************************************************************************
 
 @coppertop
-def cov(A:matrix_) -> matrix&darray:
+def cov(A:matrix_) -> matrix_:
     return (matrix&darray)(np.cov(A))
 
 @coppertop
-def max(x:matrix_):
-    return np.max(x)
+def max(x:matrix_) -> num:
+    return np.max(x) >> to >> num
 
 @coppertop
-def max(x):
-    return builtins.max(x)
+def max(x) -> num:
+    return builtins.max(x) >> to >> num
 
 @coppertop
-def mean(ndOrPy):
-    return np.mean(ndOrPy)
+def mean(ndOrPy) -> num:
+    return np.mean(ndOrPy) >> to >> num
 
 @coppertop
-def min(x:matrix_):
-    return np.min(x)
+def min(x:matrix_) -> num:
+    return np.min(x) >> to >> num
 
 @coppertop
-def min(x):
-    return builtins.min(x)
+def min(x) -> num:
+    return builtins.min(x) >> to >> num
 
 
 # **********************************************************************************************************************
@@ -56,12 +57,12 @@ def min(x):
 # **********************************************************************************************************************
 
 @coppertop
-def std(ndOrPy):
-    return np.std(ndOrPy, 0)
+def std(ndOrPy) -> num:
+    return np.std(ndOrPy, 0) >> to >> num
 
 @coppertop
-def std(ndOrPy, dof):
-    return np.std(ndOrPy, dof)
+def std(ndOrPy, dof) -> num:
+    return np.std(ndOrPy, dof) >> to >> num
 
 
 # **********************************************************************************************************************
@@ -69,15 +70,15 @@ def std(ndOrPy, dof):
 # **********************************************************************************************************************
 
 @coppertop
-def sum(x):
-    return builtins.sum(x)
+def sum(x) -> num:
+    return builtins.sum(x) >> to >> num
 
 @coppertop
 def sum(x:(N**T1)[pylist][T2]) -> num:
-    return builtins.sum(x._v)
+    return builtins.sum(x._v) >> to >> num
 
 @coppertop
 def sum(x:(N**T1)[pylist]) -> num:
-    return builtins.sum(x._v)
+    return builtins.sum(x._v) >> to >> num
 
 
