@@ -14,7 +14,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 import abc, numpy as np, typing
 from collections import UserList, UserDict
 from coppertop.pipe import fitsWithin, typeOf
-from coppertop.utils import context, Missing, Void, NotYetImplemented, PathNotTested
+from coppertop.utils import context, Missing, Void, NotYetImplemented, PathNotTested, ProgrammerError
 
 from bones.ts.metatypes import BType, extractConstructors
 from bones.ts.core import Constructors
@@ -92,61 +92,65 @@ class _tvtuple(list):
 class _tvstruct:
     __slots__ = ['_pub', '_pvt']
 
-    def __init__(self, *args_, **kwargs):
+    def __init__(self, *args_, **kwargs_):
         super().__init__()
         super().__setattr__('_pvt', {})
         super().__setattr__('_pub', {})
         super().__getattribute__('_pvt')['_t'] = type(self)
         super().__getattribute__('_pvt')['_v'] = self
 
-        constr, args = (args_[0][0], args_[1:]) if args_ and isinstance(args_[0], Constructors) else (Missing, args_)
-        if len(args) == 0:
-            # _tvstruct(), _tvstruct(**kwargs)
-            if constr:
-                super().__getattribute__('_pvt')['_t'] = constr
-            if kwargs:
-                super().__getattribute__('_pub').update(kwargs)
-        elif len(args) == 1:
-            # _tvstruct(_tvstruct), _tvstruct(dictEtc)
-            arg1 = args[0]
-            if isinstance(arg1, _tvstruct):
-                # _tvstruct(_tvstruct)
-                super().__getattribute__('_pvt')['_t'] = arg1._t
-                super().__getattribute__('_pub').update(arg1._pub)
-            elif isinstance(arg1, (dict, list, tuple, zip)):
-                # _tvstruct(dictEtc)
-                super().__getattribute__('_pub').update(arg1)
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if constrs:
+            constr = constrs[0]
+            if len(args) == 0:
+                # _tvstruct(), _tvstruct(**kwargs)
                 if constr:
                     super().__getattribute__('_pvt')['_t'] = constr
-            else:
-                # _tvstruct(t), _tvstruct(t, **kwargs)
-                super().__getattribute__('_pvt')['_t'] = arg1
                 if kwargs:
-                    # _tvstruct(t, **kwargs)
                     super().__getattribute__('_pub').update(kwargs)
-        elif len(args) == 2:
-            # _tvstruct(t, _tvstruct), _tvstruct(t, dictEtc)
-            arg1, arg2 = args
-            if kwargs:
-                # this needs sorting but I don't have time right now
-                # came up for `PMF(Brown=30, Yellow=20, Red=20, Green=10, Orange=10, Tan=10)`
-                # having two types (PMF and then _tvstruct do the construction so args is (_tvstruct, PMF)
-                super().__getattribute__('_pvt')['_t'] = arg2
-                super().__getattribute__('_pub').update(kwargs)
-                # raise TypeError('No kwargs allowed when 2 args are provided')
-                return None
-            super().__getattribute__('_pvt')['_t'] = arg1
-            if isinstance(arg2, _tvstruct):
-                # _tvstruct(t, _tvstruct)
-                super().__getattribute__('_pub').update(arg2._pub)
+            elif len(args) == 1:
+                # _tvstruct(_tvstruct), _tvstruct(dictEtc)
+                arg1 = args[0]
+                if isinstance(arg1, _tvstruct):
+                    # _tvstruct(_tvstruct)
+                    super().__getattribute__('_pvt')['_t'] = arg1._t
+                    super().__getattribute__('_pub').update(arg1._pub)
+                elif isinstance(arg1, (dict, list, tuple, zip)):
+                    # _tvstruct(dictEtc)
+                    super().__getattribute__('_pub').update(arg1)
+                    if constr:
+                        super().__getattribute__('_pvt')['_t'] = constr
+                else:
+                    # _tvstruct(t), _tvstruct(t, **kwargs)
+                    super().__getattribute__('_pvt')['_t'] = arg1
+                    if kwargs:
+                        # _tvstruct(t, **kwargs)
+                        super().__getattribute__('_pub').update(kwargs)
+            elif len(args) == 2:
+                # _tvstruct(t, _tvstruct), _tvstruct(t, dictEtc)
+                arg1, arg2 = args
+                if kwargs:
+                    # this needs sorting but I don't have time right now
+                    # came up for `PMF(Brown=30, Yellow=20, Red=20, Green=10, Orange=10, Tan=10)`
+                    # having two types (PMF and then _tvstruct do the construction so args is (_tvstruct, PMF)
+                    super().__getattribute__('_pvt')['_t'] = arg2
+                    super().__getattribute__('_pub').update(kwargs)
+                    # raise TypeError('No kwargs allowed when 2 args are provided')
+                    return None
+                super().__getattribute__('_pvt')['_t'] = arg1
+                if isinstance(arg2, _tvstruct):
+                    # _tvstruct(t, _tvstruct)
+                    super().__getattribute__('_pub').update(arg2._pub)
+                else:
+                    # _tvstruct(t, dictEtc)
+                    super().__getattribute__('_pub').update(arg2)
             else:
-                # _tvstruct(t, dictEtc)
-                super().__getattribute__('_pub').update(arg2)
+                raise TypeError(
+                    '_tvstruct(...) must be of form _tvstruct(), _tvstruct(**kwargs), _tvstruct(_tvstruct), _tvstruct(dictEtc), ' +
+                    '_tvstruct(t), _tvstruct(t, **kwargs), _tvstruct(t, _tvstruct), _tvstruct(t, dictEtc), '
+                )
         else:
-            raise TypeError(
-                '_tvstruct(...) must be of form _tvstruct(), _tvstruct(**kwargs), _tvstruct(_tvstruct), _tvstruct(dictEtc), ' +
-                '_tvstruct(t), _tvstruct(t, **kwargs), _tvstruct(t, _tvstruct), _tvstruct(t, dictEtc), '
-            )
+            raise ProgrammerError()
 
     def __asT__(self, t):
         super().__getattribute__('_pvt')['_t'] = t

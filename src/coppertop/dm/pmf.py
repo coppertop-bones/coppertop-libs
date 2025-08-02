@@ -22,7 +22,7 @@
 import operator, random, numpy as np, enum, scipy.stats, collections.abc
 
 from coppertop.pipe import *
-from coppertop.utils import NotYetImplemented
+from coppertop.utils import NotYetImplemented, Missing
 
 from bones.ts.metatypes import BType
 from bones.lang.types import litstruct
@@ -67,14 +67,22 @@ def _makeDF(cs, *args, **kwargs):
         raise NotYetImplemented()
 
 def _makePmf(cs, *args, **kwargs):
-    answer = _makeDF(cs, *args, **kwargs)
-    if answer: answer = _normaliseInPlace(answer)
-    return answer | PMF
+    df = _makeDF(cs, *args, **kwargs)
+    if df: df = _normaliseInPlace(df)
+    return df | PMF
 
 def _makeCmf(cs, *args, **kwargs):
     # OPEN: check 0 < all values <= 1 and last v == 1
-    answer = _makeDF(cs, *args, **kwargs)
-    return answer | CMF
+    df = _makeDF(cs, *args, **kwargs)
+    running = 0.0
+    fn = {}
+    for k, v in df.fn_.items():
+        running += v
+        fn[k] = running
+    df.fn_ = fn
+    df.cmf_ = np.array(list(fn.items()))
+    #answer._cmf[:, 1] = np.cumsum(answer._cmf[:, 1])
+    return df | CMF
 
 DF = BType('DF: DF & dstruct in mem').setPP('DF').setConstructor(_makeDF)
 DF.__doc__ = 'Discrete Function - {fn_: f64**f64[dmap]} * {...} i.e. a fn and zero or more custom fields'
@@ -149,19 +157,6 @@ def to(xs:pylist, t:PMF, kde:scipy.stats.kde.gaussian_kde) -> PMF:
     for x in xs:
         fn[x] = kde.evaluate(x)[0]
     return PMF(fn)
-
-@coppertop(style=binary)
-def to(pmf:PMF, t:CMF) -> CMF:
-    answer = DF(pmf) | CMF
-    running = 0.0
-    df = {}
-    for k, v in pmf.fn_.items():
-        running += v
-        df[k] = running
-    answer.fn_ = df
-    answer.cmf_ = np.array(list(df.items()))
-    #answer._cmf[:, 1] = np.cumsum(answer._cmf[:, 1])
-    return answer
 
 
 
@@ -276,12 +271,14 @@ def quantile(pmf:PMF, x:num):
         total += v
         if total >= x:
             return k
+    return Missing
 
 @coppertop(style=unary)
 def quantile(cmf:CMF, x:num):
-    for k, v in cmf.fn_.items():
+    for k, v in cmf.cmf_:
         if v >= x:
             return k
+    return Missing
 
 
 # **********************************************************************************************************************

@@ -21,7 +21,7 @@ from coppertop.dm.examples.cluedo.core import Card, people, weapons, rooms, TBI,
 
 
 # coercers - # OPEN: can these b§e sensibly defaulted in metatypes or templated?
-(Card^txt).setCoercer(makeFn)
+(Card^txt).setCoercer(asUnary)
 (N**Card)[dseq].setCoercer(dseq)
 
 

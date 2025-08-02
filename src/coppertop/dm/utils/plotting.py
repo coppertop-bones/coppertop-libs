@@ -25,11 +25,10 @@ matrix_ = matrix&darray
 def scatter(F:matrix_) -> plotnine.ggplot:
     df = pandaframe({
         'X':  F >> atCol >> 0 >> to >> array_,
-        'Y':  F >> atCol >> 1 >> to >> array_
+        'Y':  F >> atCol >> 1 >> to >> array_,
     })
     p = plotnine.ggplot(df, plotnine.aes(x='X', y='Y')) + plotnine.geom_point()
     return p
-
 
 @coppertop
 def qq(res:array_) -> void:
@@ -37,12 +36,12 @@ def qq(res:array_) -> void:
     return Void
 
 @coppertop
-def correlogram(pdf:pandaframe) -> void:
-    return _correlogram(pdf)
+def correlogram(f:pandaframe) -> void:
+    return _correlogram(f)
 
 @coppertop
-def correlogram(pdf:pandaframe, kwargs:pydict) -> void:
-    return _correlogram(pdf, **kwargs)
+def correlogram(f:pandaframe, kwargs:pydict) -> void:
+    return _correlogram(f, **kwargs)
 
 def _correlogram(pdf:pandaframe, kind="reg", diag_kind='kde') -> void:
     sns.pairplot(
@@ -53,6 +52,6 @@ def _correlogram(pdf:pandaframe, kind="reg", diag_kind='kde') -> void:
     return Void
 
 @coppertop
-def PP(p:plotnine.ggplot):
+def PP(p:plotnine.ggplot) -> plotnine.ggplot:
     fig = p.draw(show=True)
     return p
