@@ -148,6 +148,7 @@ def sequence(p1, p2, n=Missing, step=Missing, sigmas=Missing):
     else:
         raise NotImplementedError('Unhandled case')
 bt.offset.sequence = sequence
+
 @coppertop
 def sequence_(n:bt.count):
     return range(n)

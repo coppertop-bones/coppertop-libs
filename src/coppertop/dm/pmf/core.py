@@ -19,12 +19,13 @@
 # DF is implemented as {fn: f64**f64[dmap], attr:txt**T[dmap]} where the attr hold attributes such as a name
 #     in C or bones we might use a variable length struct
 
-import operator, random, numpy as np, enum, scipy.stats, collections.abc
+import operator, random, numpy as np, enum, scipy.stats, collections.abc, plotnine
+
 
 from coppertop.pipe import *
 from coppertop.utils import NotYetImplemented, Missing
 
-from bones.ts.metatypes import BType
+from bones.ts.metatypes import BType, extractConstructors
 from bones.lang.types import litstruct
 from bones.kernel.sym_manager import Sym
 
@@ -33,6 +34,7 @@ from coppertop.dm.core.conv import to
 from coppertop.dm.core.misc import sequence
 from coppertop.dm.core.types import pylist, index, pytuple, num, dstruct, matrix, dmap, py, darray
 from coppertop.dm.pp import PP
+
 
 
 # **********************************************************************************************************************
@@ -71,16 +73,21 @@ def _makePmf(cs, *args, **kwargs):
     if df: df = _normaliseInPlace(df)
     return df | PMF
 
-def _makeCmf(cs, *args, **kwargs):
+def _makeCmf(*args_, **kwargs_):
+    constrs, args, kwargs = extractConstructors(args_, kwargs_)
     # OPEN: check 0 < all values <= 1 and last v == 1
-    df = _makeDF(cs, *args, **kwargs)
-    running = 0.0
-    fn = {}
-    for k, v in df.fn_.items():
-        running += v
-        fn[k] = running
-    df.fn_ = fn
-    df.cmf_ = np.array(list(fn.items()))
+    df = _makeDF(constrs, *args, **kwargs)
+    arg = args[0]
+    if fitsWithin(typeOf(arg), PMF):
+        running = 0.0
+        fn = {}
+        for k, v in df.fn_.items():
+            running += v
+            fn[k] = running
+        df.fn_ = fn
+        df.cmf_ = np.array(list(fn.items()))
+    else:
+        df.cmf_ = np.array(list(df.fn_.items()))
     #answer._cmf[:, 1] = np.cumsum(answer._cmf[:, 1])
     return df | CMF
 
@@ -158,6 +165,13 @@ def to(xs:pylist, t:PMF, kde:scipy.stats.kde.gaussian_kde) -> PMF:
         fn[x] = kde.evaluate(x)[0]
     return PMF(fn)
 
+@coppertop(style=binary)
+def to(df:DF, t:np.ndarray) -> np.ndarray:
+    return np.array(df.fn_.items())
+
+@coppertop(style=binary)
+def to(df:CMF, t:np.ndarray) -> np.ndarray:
+    return df.cmf_
 
 
 # **********************************************************************************************************************
@@ -261,6 +275,13 @@ def _rvOp(lhs, rhs, op):
     )
 
 @coppertop
+def maxLikelihood(pmf:PMF) -> py:
+    """answer the x with the maximum likelihood"""
+    if not pmf.fn_:
+        return Missing
+    return max(pmf.fn_.items(), key=lambda kv: kv[1])[0]
+
+@coppertop
 def toXsPs(pmf:PMF) -> pytuple:
     return tuple(zip(*pmf.fn_.items()))
 
@@ -279,44 +300,6 @@ def quantile(cmf:CMF, x:num):
         if v >= x:
             return k
     return Missing
-
-
-# **********************************************************************************************************************
-# plotting functions
-# **********************************************************************************************************************
-
-@coppertop
-def toSteps(s:PMF) -> pytuple:
-    return _asSteps(s >> keys, s >> values)
-
-@coppertop
-def toSteps(s:PMF, kwargs) -> pytuple:
-    return _asSteps(s >> keys, s >> values, **kwargs)
-
-def _asSteps(xs:pylist, ys:pylist, align='center', width=None):
-    #xMin, xMax = min(xs), max(xs)
-    if width is None:
-        width = np.diff(list(xs)).min()
-    points = []
-    lastx = np.nan
-    lasty = np.nan
-    for x, y in [xs, ys] >> zipAll:
-        if (x - lastx) > 1e-5:
-            points.append((lastx, 0))
-            points.append((x, 0))
-        if not np.isnan(lasty):
-            points.append((x, lasty))
-        points.append((x, y))
-        points.append((x + width, y))
-        lastx = x + width
-        lasty = y
-    points.append((lastx, lasty))
-    pxs, pys = points >> zipAll
-    if align == 'center':
-        pxs = np.array(pxs) - width / 2.0
-    elif align == 'right':
-        pxs = np.array(pxs) - width
-    return pxs, np.array(pys)
 
 
 # **********************************************************************************************************************

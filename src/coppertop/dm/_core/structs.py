@@ -150,7 +150,17 @@ class _tvstruct:
                     '_tvstruct(t), _tvstruct(t, **kwargs), _tvstruct(t, _tvstruct), _tvstruct(t, dictEtc), '
                 )
         else:
-            raise ProgrammerError()
+            if len(args) == 1:
+                # _tvstruct(_tvstruct)
+                arg1 = args[0]
+                if isinstance(arg1, _tvstruct):
+                    # _tvstruct(_tvstruct)
+                    super().__getattribute__('_pvt')['_t'] = arg1._t
+                    super().__getattribute__('_pub').update(arg1._pub)
+                else:
+                    raise ProgrammerError()
+            else:
+                raise ProgrammerError()
 
     def __asT__(self, t):
         super().__getattribute__('_pvt')['_t'] = t

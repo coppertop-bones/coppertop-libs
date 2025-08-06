@@ -447,19 +447,16 @@ def sequence_(n):
 offset.sequence_ = sequence_
 
 
-def createDFrame(*args_, **kwargs):
-    t, args = (args_[0][0], args_[1:]) if args_ and isinstance(args_[0], Constructors) else (Missing, args_)
+def createDFrame(*args_, **kwargs_):
+    constrs, args, kwargs = extractConstructors(args_, kwargs_)
     if len(args) == 0:
-        return _tvstruct(t, **kwargs)
+        return _tvstruct(constrs, **kwargs)
     elif len(args) == 1:
-        x = args[0]
-        assert x.keys() == kwargs.keys()
-        return _tvstruct(x & t, **kwargs)
+        t = args[0]
+        assert t.keys() == kwargs.keys()
+        return _tvstruct(constrs[0] & t, **kwargs)
     else:
         raise ProgrammerError()
-    constr(t, **kwargs)
-    return x
-
 
 def _coerceToDseq(t, v):
     return dseq(t, v)
@@ -497,6 +494,24 @@ __all__ += [
     'pytype', 'btype'
 ]
 
+
+# **********************************************************************************************************************
+# frames
+# **********************************************************************************************************************
+
+polarframe = BType('polarframe: polarframe & py in mem')
+polarseries = BType('polarseries: polarseries & py in mem')
+pandaframe = BType('pandaframe: pandaframe & py in mem')
+
+
+__all__ += [
+    'polarframe', 'polarseries', 'pandaframe'
+]
+
+
+# **********************************************************************************************************************
+# add mappings of classes to types
+# **********************************************************************************************************************
 
 def _init():
     # easiest way to keep namespace a little cleaner

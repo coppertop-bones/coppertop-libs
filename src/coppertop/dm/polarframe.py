@@ -12,32 +12,31 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 import builtins, polars as pl
 from coppertop.pipe import *
+from coppertop.pipe import _btypeByClass
 from coppertop.utils import NotYetImplemented, ImpossiblePathError
 from bones.ts.metatypes import BType, extractConstructors
 from coppertop.dm.core.types import pylist, pytuple, pydict_keys, pydict_values, pyset, txt, t, offset, matrix, darray, \
-    pydict, index
+    pydict, index, polarframe, polarseries
 
 
-polarframe = BType('polarframe: polarframe & py in mem')
-polarseries = BType('polarseries: polarseries & py in mem')
+_btypeByClass[pl.DataFrame] = polarframe
+_btypeByClass[pl.Series] = polarseries
 
-
-def _conPolarframe(f:pl.DataFrame) -> polarframe:
-    """
-    Coerce a polars DataFrame to a polarframe.
-    """
-    def __new__(cls, *args_, **kwargs_):
-        constrs, args, kwargs = extractConstructors(args_, kwargs_)
-        if constrs:
-            if len(constrs) != 1: raise NotYetImplemented()
-            constr = constrs[0]
-            raise NotYetImplemented()
-        else:
-            raise ImpossiblePathError()
-
-
-    return polarframe(f)
-
+# def _conPolarframe(f:pl.DataFrame) -> polarframe:
+#     """
+#     Coerce a polars DataFrame to a polarframe.
+#     """
+#     def __new__(cls, *args_, **kwargs_):
+#         constrs, args, kwargs = extractConstructors(args_, kwargs_)
+#         if constrs:
+#             if len(constrs) != 1: raise NotYetImplemented()
+#             constr = constrs[0]
+#             raise NotYetImplemented()
+#         else:
+#             raise ImpossiblePathError()
+#
+#
+#     return polarframe(f)
 
 
 # **********************************************************************************************************************
@@ -45,11 +44,11 @@ def _conPolarframe(f:pl.DataFrame) -> polarframe:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def aj(f1:pl.DataFrame, f2:pl.DataFrame, k:txt, direction:txt):
+def aj(f1:polarframe, f2:polarframe, k:txt, direction:txt):
     return f1.join_asof(f2, on=k, strategy='backward' if direction == 'prior' else 'forward')
 
 @coppertop(style=binary)
-def aj(f1:pl.DataFrame, f2:pl.DataFrame, k1:txt, k2:txt, direction:txt):
+def aj(f1:polarframe, f2:polarframe, k1:txt, k2:txt, direction:txt):
     return f1.join_asof(f2, left_on=k1, right_on=k2, strategy='backward' if direction == 'prior' else 'forward')
 
 
@@ -58,7 +57,7 @@ def aj(f1:pl.DataFrame, f2:pl.DataFrame, k1:txt, k2:txt, direction:txt):
 # **********************************************************************************************************************
 
 @coppertop(style=unary)
-def asc(f:pl.DataFrame) -> pl.DataFrame:
+def asc(f:polarframe) -> polarframe:
     return f.sort(by=f >> colNames >> at >> 0)
 
 
@@ -67,23 +66,23 @@ def asc(f:pl.DataFrame) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def at(df:pl.DataFrame, k:txt):
+def at(df:polarframe, k:txt):
     return df.get_column(k)
 
 @coppertop(style=binary)
-def at(df:pl.DataFrame, o:offset) -> pydict:
+def at(df:polarframe, o:offset) -> pydict:
     return df.row(o, named=True)
 
 @coppertop(style=binary)
-def at(df:pl.DataFrame, i:index) -> pydict:
+def at(df:polarframe, i:index) -> pydict:
     return df.row(i - 1, named=True)
 
 @coppertop(style=binary)
-def at(s:pl.Series, o:offset):
+def at(s:polarseries, o:offset):
     return s[o]
 
 @coppertop(style=binary)
-def at(s:pl.Series, i:index):
+def at(s:polarseries, i:index):
     return s[i - 1]
 
 
@@ -92,7 +91,7 @@ def at(s:pl.Series, i:index):
 # **********************************************************************************************************************
 
 @coppertop
-def colNames(df:pl.DataFrame) -> pylist:
+def colNames(df:polarframe) -> pylist:
     return df.columns
 
 
@@ -101,7 +100,7 @@ def colNames(df:pl.DataFrame) -> pylist:
 # **********************************************************************************************************************
 
 @coppertop
-def conv(f:pl.DataFrame, conversions:pydict) -> pl.DataFrame:
+def conv(f:polarframe, conversions:pydict) -> polarframe:
     for n, conversion in conversions.items():
         f = f.with_columns(conversion(pl.col(n)))
     return f
@@ -112,7 +111,7 @@ def conv(f:pl.DataFrame, conversions:pydict) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop
-def diffRows(f: pl.DataFrame) -> pl.DataFrame:
+def diffRows(f: polarframe) -> polarframe:
     """
     Returns a DataFrame containing the differences between consecutive rows.
     """
@@ -127,18 +126,18 @@ def diffRows(f: pl.DataFrame) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def drop(f: pl.DataFrame, n: t.count) -> pl.DataFrame:
+def drop(f: polarframe, n: t.count) -> polarframe:
     if n >= 0:
         return f[n:]
     else:
         return f[:n]
 
 @coppertop(style=binary)
-def drop(f: pl.DataFrame, k:txt) -> pl.DataFrame:
+def drop(f: polarframe, k:txt) -> polarframe:
     return f.drop(k)
 
 @coppertop(style=binary)
-def drop(f: pl.DataFrame, ks:pylist) -> pl.DataFrame:
+def drop(f: polarframe, ks:pylist) -> polarframe:
     # OPEN: distinguish between a list of ints and a list of txt
     return f.drop(ks)
 
@@ -148,11 +147,11 @@ def drop(f: pl.DataFrame, ks:pylist) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop
-def first(f: pl.Series):
+def first(f: polarseries):
     return f[0]
 
 @coppertop
-def first(f: pl.DataFrame) -> pl.DataFrame:
+def first(f: polarframe) -> polarframe:
     return f[:1]
 
 
@@ -161,11 +160,11 @@ def first(f: pl.DataFrame) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop
-def firstLast(f: pl.DataFrame) -> pl.DataFrame:
+def firstLast(f: polarframe) -> polarframe:
     return f[[1, -1]]
 
 @coppertop
-def firstLast(f: pl.Series) -> pl.Series:
+def firstLast(f: polarseries) -> polarseries:
     return f[[1, -1]]
 
 
@@ -174,11 +173,11 @@ def firstLast(f: pl.Series) -> pl.Series:
 # **********************************************************************************************************************
 
 @coppertop
-def last(f: pl.DataFrame) -> pl.DataFrame:
+def last(f: polarframe) -> polarframe:
     return f[-1:]
 
 @coppertop
-def last(f: pl.Series):
+def last(f: polarseries):
     return f[-1]
 
 
@@ -187,11 +186,11 @@ def last(f: pl.Series):
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def lj(f1:pl.DataFrame, f2:pl.DataFrame, k:txt):
+def lj(f1:polarframe, f2:polarframe, k:txt):
     return f1.join(f2, on=k, how='left')
 
 @coppertop(style=binary)
-def lj(f1:pl.DataFrame, f2:pl.DataFrame, k1:txt, k2:txt):
+def lj(f1:polarframe, f2:polarframe, k1:txt, k2:txt):
     return f1.join(f2, left_on=k1, right_on=k2, how='left')
 
 
@@ -200,7 +199,7 @@ def lj(f1:pl.DataFrame, f2:pl.DataFrame, k1:txt, k2:txt):
 # **********************************************************************************************************************
 
 @coppertop
-def numCols(df:pl.DataFrame) -> t.count:
+def numCols(df:polarframe) -> t.count:
     return len(df.columns) | t.count
 
 
@@ -209,7 +208,7 @@ def numCols(df:pl.DataFrame) -> t.count:
 # **********************************************************************************************************************
 
 @coppertop
-def numRows(df:pl.DataFrame) -> t.count:
+def numRows(df:polarframe) -> t.count:
     return len(df) | t.count
 
 
@@ -218,7 +217,7 @@ def numRows(df:pl.DataFrame) -> t.count:
 # **********************************************************************************************************************
 
 @coppertop
-def read(path:txt) -> pl.DataFrame:
+def read(path:txt) -> polarframe:
     return pl.read_csv(path, try_parse_dates=True)
 
 
@@ -227,16 +226,16 @@ def read(path:txt) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop
-def rename(f:pl.DataFrame, newByOld:pydict) -> pl.DataFrame:
+def rename(f:polarframe, newByOld:pydict) -> polarframe:
     return f.rename(newByOld)
 
 @coppertop
-def rename(f:pl.DataFrame, old:pylist+pytuple+pydict_keys+pydict_values, new:pylist+pytuple+pydict_keys+pydict_values) -> pl.DataFrame:
+def rename(f:polarframe, old:pylist+pytuple+pydict_keys+pydict_values, new:pylist+pytuple+pydict_keys+pydict_values) -> polarframe:
     oldNew = dict(builtins.zip(old, new))
     return f.rename(oldNew)
 
 @coppertop
-def rename(f:pl.DataFrame, old:txt, new:txt) -> pl.DataFrame:
+def rename(f:polarframe, old:txt, new:txt) -> polarframe:
     oldNew = {old:new}
     return f.rename(oldNew)
 
@@ -246,7 +245,7 @@ def rename(f:pl.DataFrame, old:txt, new:txt) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop
-def schema(df:pl.DataFrame) -> pl.Schema:
+def schema(df:polarframe) -> pl.Schema:
     return df.schema
 
 
@@ -255,7 +254,7 @@ def schema(df:pl.DataFrame) -> pl.Schema:
 # **********************************************************************************************************************
 
 @coppertop
-def shape(df:pl.DataFrame) -> pytuple:
+def shape(df:polarframe) -> pytuple:
     return df.shape #(len(df) | t.count, len(df.columns) | t.count)
 
 
@@ -264,18 +263,18 @@ def shape(df:pl.DataFrame) -> pytuple:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def take(f: pl.DataFrame, n: t.count) -> pl.DataFrame:
+def take(f: polarframe, n: t.count) -> polarframe:
     if n >= 0:
         return f[:n]
     else:
         return f[n:]
 
 @coppertop(style=binary)
-def take(f: pl.DataFrame, ks: pylist+pyset) -> pl.DataFrame:
+def take(f: polarframe, ks: pylist+pyset) -> polarframe:
     return f.select(ks)
 
 @coppertop(style=binary)
-def take(f: pl.DataFrame, k: txt) -> pl.DataFrame:
+def take(f: polarframe, k: txt) -> polarframe:
     return f.select(k)
 
 
@@ -284,7 +283,7 @@ def take(f: pl.DataFrame, k: txt) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop
-def takePanel(f: pl.DataFrame) -> matrix&darray:
+def takePanel(f: polarframe) -> matrix&darray:
     return (matrix&darray)(f.to_numpy())
 
 
@@ -315,17 +314,30 @@ def to(col: pl.Expr, t, format: txt) -> pl.Expr:
     else:
         raise TypeError(f"Got a {t} for t but only support pl.Date, pl.Datetime, and pl.Time.")
 
+@coppertop(style=binary)
+def to(d:pydict, t:polarframe):
+    return pl.DataFrame(d)
+
+
+# **********************************************************************************************************************
+# toPolars
+# **********************************************************************************************************************
+
+@coppertop
+def toPolars(d:pydict):
+    return pl.DataFrame(d)
+
 
 # **********************************************************************************************************************
 # where
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def where(f:pl.DataFrame, pred:pl.Expr) -> pl.DataFrame:
+def where(f:polarframe, pred:pl.Expr) -> polarframe:
     return f.filter(pred)
 
 @coppertop(style=binary)
-def where(f:pl.DataFrame, fn) -> pl.DataFrame:
+def where(f:polarframe, fn) -> polarframe:
     return f.filter([fn(d) for d in f.to_dicts()])
 
 
@@ -334,10 +346,10 @@ def where(f:pl.DataFrame, fn) -> pl.DataFrame:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def xasc(f:pl.DataFrame, ks:pylist+pytuple) -> pl.DataFrame:
+def xasc(f:polarframe, ks:pylist+pytuple) -> polarframe:
     return f.sort(by=ks)
 
 @coppertop(style=binary)
-def xasc(f:pl.DataFrame, k:txt) -> pl.DataFrame:
+def xasc(f:polarframe, k:txt) -> polarframe:
     return f.sort(by=k)
 

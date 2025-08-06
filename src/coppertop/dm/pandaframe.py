@@ -14,13 +14,10 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 import numpy as np, csv, pandas as pd, polars as pl
 
 from coppertop.pipe import *
-from coppertop.dm.core.types import dframe
+from coppertop.dm.core.types import dframe, pydict, polarframe, pandaframe
 from coppertop.dm.core.aggman import array_
 from coppertop.dm.core.conv import to
 
-
-pandaframe = pd.DataFrame
-polarframe = pl.DataFrame
 
 
 # **********************************************************************************************************************
@@ -42,5 +39,15 @@ def to(f:polarframe, t:pandaframe) -> pandaframe:
 def to(f:pandaframe, t:polarframe) -> polarframe:
     return pl.from_pandas(f)
 
+@coppertop(style=binary)
+def to(d:pydict, t:pandaframe) -> pd.DataFrame:
+    return pl.DataFrame(d).to_pandas()
 
 
+# **********************************************************************************************************************
+# toPandas
+# **********************************************************************************************************************
+
+@coppertop
+def toPandas(d:pydict) -> pd.DataFrame:
+    return pl.DataFrame(d).to_pandas()
