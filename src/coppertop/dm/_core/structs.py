@@ -296,7 +296,7 @@ class _tvseq(UserList):
 
     def __init__(self, *args_, **kwargs_):
         constrs, args, kwargs = extractConstructors(args_, kwargs_)
-        if len(constrs) == 0:
+        if not constrs:
             if len(args) == 2:
                 t, v = args
                 super().__init__(v)

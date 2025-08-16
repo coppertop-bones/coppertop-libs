@@ -23,9 +23,17 @@ from coppertop.pipe import *
 from coppertop.utils import Missing
 from coppertop.dm.core.types import num, count, offset, matrix, N, darray
 from coppertop.dm.core.aggman import toDiag
+from coppertop.dm.linalg.decomp.svd import svd
 
 a_ = (N**num) & darray
 m_ = matrix
+
+
+@coppertop
+def pca(panel:matrix):
+    res = svd(panel)
+    vor, e, sfv, thetas, sorts = orientEigenvectors(res.vT.T, res.s)
+    return vor, res.s
 
 
 @coppertop(style=nullary)

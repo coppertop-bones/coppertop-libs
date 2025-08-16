@@ -7,12 +7,13 @@
 # License. See the NOTICE file distributed with this work for additional information regarding copyright ownership.
 # **********************************************************************************************************************
 
-import scipy.linalg, numpy as np, numpy.linalg
+import numpy as np
 
 from coppertop.pipe import *
-from coppertop.dm.core.types import matrix, N, num, T, darray
-from coppertop.dm.linalg.types import orth, right, upper, lower, Cholesky, QR, SVD, left
+from coppertop.dm.core.types import matrix, N, num, darray, index
+from coppertop.dm.core import to
 import coppertop.dm.linalg.orient
+from coppertop.dm.core.text_report import display_table, PP as PP2
 
 
 array_ = (N**num)[darray]
@@ -20,66 +21,45 @@ array_ = (N**num)[darray]
 
 # NB a 1x1 matrix is assumed to be a scalar, e.g. https://®®en.wikipedia.org/wiki/Dot_product#Algebraic_definition
 
+@coppertop
+def col(A:matrix, i:index) -> matrix:
+    return A[:,i-1:i]
+
+@coppertop
+def cols(A:matrix, i1:index, i2:index) -> matrix:
+    return A[:,i1-1:i2]
 
 @coppertop
 def inv(A:matrix) -> matrix:
-    return np.linalg.inv(A)
+    return matrix(np.linalg.inv(A))
+
+@coppertop(style=binary)
+def madd(A:matrix, B:matrix) -> matrix:
+    return A + B
+
+@coppertop(style=binary)
+def mmul(A:matrix, B:matrix) -> matrix:
+    return A @ B
 
 @coppertop
-def qr(A:matrix) -> QR:
-    Q, R = np.linalg.qr(A)            # via householder?
-    q = matrix(Q) | +orth
-    r = matrix(R) | +right
-    return QR(q, r)
+def PP(x:matrix) -> matrix:
+    TR(x) >> PP2
+    return x
 
 @coppertop
-def cholesky(A:matrix) -> matrix&Cholesky:
-    # use np since in scipy.linalg.cho_factor "The returned matrix also contains random data in the entries not
-    # used by the Cholesky decomposition. If you need to zero these entries, use the function cholesky instead."
-    return matrix(np.linalg.cholesky(A)) | +Cholesky
+def row(A:matrix, i:index) -> matrix:
+    return A[i-1:i, :]
 
 @coppertop
-def svd(A:matrix) -> SVD:
-    u, s, vT = np.linalg.svd(A)
-    return SVD(matrix(u), array_(s), matrix(vT))
-
-
-
-# https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve_triangular.html
+def rows(A:matrix, i1:index, i2:index) -> matrix:
+    return A[i1-1:i2, :]
 
 @coppertop(style=binary)
-def solve(U:(upper&matrix)+(right&matrix), b:matrix[T]) -> matrix:
-    """Returns the solution x of Ux = b where U is upper triangular"""
-    return scipy.linalg.solve_triangular(U, b, lower=False).view(darray) | matrix
-
-
-@coppertop(style=binary)
-def solve(L:(lower&matrix)+(left&matrix), b:matrix[T]) -> matrix:
-    """Returns the solution x of Lx = b where U is lower triangular"""
-    return scipy.linalg.solve_triangular(L, b, lower=True).view(darray) | matrix
-
-
-@coppertop(style=binary)
-def solve(c:Cholesky&matrix, b:matrix[T]) -> matrix:
-    """Returns the solution x of Ax = b given the Cholesky decomposition of A"""
-    return matrix(scipy.linalg.cho_solve(c, b))
-
-
-@coppertop(style=binary)
-def solve(qr:QR, b:matrix[T]) -> matrix:
-    """Returns the solution x of Ax = b given a QR decomposition of A"""
-    return scipy.linalg.solve_triangular(qr.r, qr.T @ b, lower=False).view(darray) | matrix
-
-
-@coppertop(style=binary)
-def solve(svd:SVD, b:matrix[T]) -> matrix:
-    """Returns the solution x of Ax = b given the SVD of A"""
-    raise NotYetImplemented()
-
+def to(x:matrix, t:display_table) -> display_table:
+    strs = str(x).split('\n')
+    l = max(map(len, strs))
+    return display_table([s.ljust(l) for s in strs])
 
 @coppertop
-def pca(panel:matrix):
-    res = svd(panel)
-    vor, e, sfv, thetas, sorts = coppertop.dm.linalg.orient.orientEigenvectors(res.vT.T, res.s)
-    return vor, res.s
-
+def TR(x:matrix) -> display_table:
+    return x >> to >> display_table

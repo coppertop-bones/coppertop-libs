@@ -14,8 +14,10 @@ from coppertop.utils import NotYetImplemented
 from coppertop.pipe import *
 from bones.ts.metatypes import BType, extractConstructors
 
-from coppertop.dm.core.types import dseq, matrix, txt, pyint, num
+from coppertop.dm.core.types import dseq, txt, pyint, num
 
+
+# OPEN: text_report instead of display_table
 
 
 # display_table is a seq of txt (each one must be the same length)
@@ -39,9 +41,11 @@ def _consDisplayTable(*args_, **kwargs_):
         else:
             raise NotYetImplemented()
 
+
 display_table = BType('display_table: display_table & (N ** txt) & dseq in mem').setConstructor(_consDisplayTable)
 
 
+# OPEN: join -> hjoin
 @coppertop(style=binary)
 def join(A:display_table, B:display_table) -> display_table:
     if (nA := len(A)) == (nB := len(B)):
@@ -88,28 +92,18 @@ def join(A:display_table, B:display_table) -> display_table:
             return answer
 
 
-@coppertop(style=binary)
-def to(x:matrix, t:display_table) -> display_table:
-    strs = str(x).split('\n')
-    l = max(map(len, strs))
-    return display_table([s.ljust(l) for s in strs])
-
-
 @coppertop
 def PP(x:display_table) -> display_table:
     for r in x:
         print(r)
     return display_table(x)
 
+
 @coppertop
 def TR(x:txt) -> display_table:
     return display_table([x])
 
+
 @coppertop
 def TR(x:pyint + num) -> display_table:
     return display_table([str(x)])
-
-@coppertop
-def TR(x:matrix) -> display_table:
-    return x >> to >> display_table
-

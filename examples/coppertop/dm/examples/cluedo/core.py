@@ -12,6 +12,7 @@ from enum import IntEnum
 from coppertop.utils import Missing
 from bones.ts.metatypes import BType
 import coppertop.dm.core.types
+from coppertop.dm.core.text_report import display_table
 from coppertop.dm.examples.cluedo.cards import *
 
 
@@ -109,8 +110,6 @@ cluedo_helper = BType('''
             turnId: turnId
         }  & dstruct in mem
 ''')
-
-display_table = BType('display_table: display_table & (N ** txt) & dseq in mem')      # a seq of txt
 
 
 YES = 'X'
