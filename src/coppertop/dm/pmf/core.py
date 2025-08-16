@@ -221,17 +221,17 @@ def gaussian_kde(data) -> scipy.stats.kde.gaussian_kde:
     return scipy.stats.gaussian_kde(data)
 
 @coppertop(style=binary)
-def sample(cmf:CMF, n:index) -> matrix[darray]:
+def sample(cmf:CMF, n:index) -> matrix:
     vals = []
     sortedCmf = cmf['_cmf']
     for _ in range(n):
         p = random.random()
         i = np.searchsorted(sortedCmf[:, 1], p, side='left')
         vals.append(sortedCmf[i, 0])
-    return matrix[darray](vals)
+    return matrix(vals)
 
 @coppertop(style=binary)
-def sample(kde:scipy.stats.kde.gaussian_kde, n:index) -> matrix[darray]:
+def sample(kde:scipy.stats.kde.gaussian_kde, n:index) -> matrix:
     return kde.resample(n).flatten()
 
 @coppertop(style=binary, name='*')

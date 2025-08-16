@@ -30,7 +30,7 @@ def different(a, b) -> bool:
     return True if not fitsWithin(typeOf(a), typeOf(b)) or a != b else False
 
 @coppertop(style=binary)
-def different(a:matrix&darray, b:matrix&darray) -> bool:
+def different(a:matrix, b:matrix) -> bool:
     return True if not fitsWithin(typeOf(a), typeOf(b)) or bool((a != b).any()) else False
 
 @coppertop(style=binary, dispatchEvenIfAllTypes=True)
@@ -42,7 +42,7 @@ def equals(a, b) -> bool:
     return True if fitsWithin(typeOf(a), typeOf(b)) and a == b else False
 
 @coppertop(style=binary, dispatchEvenIfAllTypes=True)
-def equals(a:matrix&darray, b:matrix&darray) -> bool:
+def equals(a:matrix, b:matrix) -> bool:
     return True if fitsWithin(typeOf(a), typeOf(b)) and bool((a == b).all()) else False
 
 @coppertop(style=binary)

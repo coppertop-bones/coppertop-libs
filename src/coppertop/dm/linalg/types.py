@@ -32,23 +32,23 @@ rowvec = BTAtom('rowvec')
 Cholesky = BTAtom('Cholesky')
 
 
-matrix_ = matrix & darray
+matrix = matrix
 array_ = (N**num) & darray
 
 
 QR = BType('QR: QR & {qT:matrix, r:matrix&right} in mem')
 @coppertop(style=nullary)
-def _makeQR(ts, q:matrix_, r:matrix_):
+def _makeQR(ts, q:matrix, r:matrix):
     return dstruct(QR&dstruct, q=q, r=r)
 @coppertop(style=nullary)
 def _makeQR(ts, qr:pytuple):
-    return dstruct(QR&dstruct, q=matrix_(qr[0]), r=matrix_(qr[1]))
+    return dstruct(QR&dstruct, q=matrix(qr[0]), r=matrix(qr[1]))
 QR.setConstructor(_makeQR)
 
 
 # SVD = BType('SVD: SVD & {u:matrix, s:N**num, vt:matrix} & dstruct in mem')
 SVD = BType('SVD: SVD & {u:matrix, s:N**num, vt:matrix} in mem')
 @coppertop(style=nullary)
-def _makeSVD(ts, u:matrix_, s:array_, vT:matrix_) -> SVD:
+def _makeSVD(ts, u:matrix, s:array_, vT:matrix) -> SVD:
     return dstruct(SVD, u=u, s=s, vT=vT)
 SVD.setConstructor(_makeSVD)

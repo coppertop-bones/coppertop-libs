@@ -296,8 +296,14 @@ class _tvseq(UserList):
 
     def __init__(self, *args_, **kwargs_):
         constrs, args, kwargs = extractConstructors(args_, kwargs_)
-        if constrs:
-            if len(constrs) != 1: raise NotYetImplemented()
+        if len(constrs) == 0:
+            if len(args) == 2:
+                t, v = args
+                super().__init__(v)
+                self._t = t
+            else:
+                raise NotYetImplemented()
+        elif len(constrs) == 1:
             constr = constrs[0]
             if len(args) == 1:
                 arg = args[0]
@@ -325,10 +331,11 @@ class _tvseq(UserList):
             else:
                 raise TypeError("Invalid arguments to _tvseq constructor")
         else:
-            if len(args) == 2:
-                t, v = args
-                super().__init__(v)
-                self._t = t
+            constr = constrs[0]
+            if len(args) == 1:
+                # e.g. dseq([1,2,3])
+                super().__init__(args[0])
+                self._t = constr
             else:
                 raise NotYetImplemented()
 
@@ -514,26 +521,27 @@ class _tvarray(_nd):
     def __new__(cls, *args_, **kwargs_):
         constrs, args, kwargs = extractConstructors(args_, kwargs_)
         if constrs:
-            if len(constrs) != 1: raise NotYetImplemented()
+            # if len(constrs) != 1:
+            #     raise NotYetImplemented(f'constrs: {constrs}')
             constr = constrs[0]
             if len(args) == 0:
                 # we have a null tuple
                 raise NotYetImplemented()
             elif len(args) == 1:
-                if t:
+                if constr:
                     instance = np.asarray(args[0], **kwargs).view(cls)
-                    instance._t_ = t
+                    instance._t_ = constr
                 else:
                     raise SyntaxError()
             elif len(args) == 2:
-                arg1, arg2 = args
-                if isinstance(arg1, BType):
+                t, v = args
+                if isinstance(t, BType):
                     # darray(t, iterable)
                     try:
-                        instance = np.asarray(arg2, **kwargs).view(cls)
-                        instance._t_ = arg1
+                        instance = np.asarray(v, **kwargs).view(cls)
+                        instance._t_ = t
                     except Exception as ex:
-                        print(f'{arg1}    {arg2} {ex}')
+                        print(f'{t}    {v} {ex}')
                         raise ex
                 else:
                     raise SyntaxError()

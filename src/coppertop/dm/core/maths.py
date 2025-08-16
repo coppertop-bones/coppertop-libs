@@ -24,7 +24,6 @@ import itertools, scipy
 EPS = 7.105427357601E-15      # i.e. double precision
 
 array_ = (N**num)&darray
-matrix_ = matrix&darray
 
 
 
@@ -170,8 +169,8 @@ def roundHalfToPos(x):
     raise NotYetImplemented()
 
 @coppertop
-def round(xs:matrix&darray, figs:t.count) -> matrix&darray:
-    return (matrix&darray)(np.round(xs, figs))
+def round(xs:matrix, figs:t.count) -> matrix:
+    return (matrix)(np.round(xs, figs))
 
 @coppertop
 def round(xs:array_, figs:t.count) -> array_:

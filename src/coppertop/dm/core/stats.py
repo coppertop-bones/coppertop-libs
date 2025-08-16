@@ -19,7 +19,6 @@ from coppertop.dm.core.conv import to
 
 
 array_ = (N**num)&darray
-matrix_ = matrix&darray
 
 
 
@@ -28,11 +27,11 @@ matrix_ = matrix&darray
 # **********************************************************************************************************************
 
 @coppertop
-def cov(A:matrix_) -> matrix_:
-    return (matrix&darray)(np.cov(A))
+def cov(A:matrix) -> matrix:
+    return (matrix)(np.cov(A))
 
 @coppertop
-def max(x:matrix_) -> num:
+def max(x:matrix) -> num:
     return np.max(x) >> to >> num
 
 @coppertop
@@ -44,7 +43,7 @@ def mean(ndOrPy) -> num:
     return np.mean(ndOrPy) >> to >> num
 
 @coppertop
-def min(x:matrix_) -> num:
+def min(x:matrix) -> num:
     return np.min(x) >> to >> num
 
 @coppertop

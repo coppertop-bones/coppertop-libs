@@ -194,3 +194,4 @@ class _Collector(list):
     def __lshift__(self, other):  # self << other
         self.append(other)
         return self
+

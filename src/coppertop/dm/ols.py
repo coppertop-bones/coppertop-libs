@@ -18,7 +18,6 @@ from coppertop.dm.core.aggman import takeRowRemain, hjoin, numRows
 OLSResult = BType('OLSResult: OLSResult & dstruct')
 
 array_ = (N**num)&darray
-matrix_ = matrix&darray
 
 # OLS
 # why replicate the work?
@@ -76,14 +75,14 @@ matrix_ = matrix&darray
 # https://en.wikipedia.org/wiki/Mean_squared_error#In_regression
 
 @coppertop(style=nullary)
-def ols(Y:matrix&darray, X:matrix&darray) -> OLSResult:
+def ols(Y:matrix, X:matrix) -> OLSResult:
     return _ols(Y, X, {})
 
 @coppertop(style=nullary)
-def ols(Y: matrix & darray, X: matrix & darray, options:pydict) -> OLSResult:
+def ols(Y: matrix, X: matrix, options:pydict) -> OLSResult:
     return _ols(Y, X, options)
 
-def _ols(Y:matrix&darray, X:matrix&darray, options) -> OLSResult:
+def _ols(Y:matrix, X:matrix, options) -> OLSResult:
     addIntercept = options.get('addIntercept', False)
     X = np.append(np.ones((X.shape[0], 1)), X, axis=1) if addIntercept else X
     N, K = X.shape  # N is number of observations, K is number of betaHats, plus one for the intercept, YBar, if required
@@ -93,7 +92,7 @@ def _ols(Y:matrix&darray, X:matrix&darray, options) -> OLSResult:
     # `np.array([[1], [2]]) + np.array([1, 2]) == np.array([2,3],[3,4])`
     # so until we've made np.array's +, - etc type safe we'll answer a column matrix
     # recalling that we answer xHat in A.xHat = b + e
-    betaHat = (matrix&darray)(betaHat)
+    betaHat = matrix(betaHat)
     # TODO in the future treat np.float64 as litnum (which weakens to num)
     # the type system whilst not preventing us from making mistakes it does constrain us to thoughtful architecture
     SSres = float(SSres)
@@ -113,7 +112,7 @@ def _ols(Y:matrix&darray, X:matrix&darray, options) -> OLSResult:
     ))
 
 @coppertop
-def betaHat(res:OLSResult) -> matrix&darray:
+def betaHat(res:OLSResult) -> matrix:
     return res.betaHat
 
 def _r2(res:OLSResult):
@@ -154,19 +153,19 @@ def fCrit(res:OLSResult, confidence) -> num:
     return float(scipy.stats.f.ppf(q=1-confidence, dfn=res.K - 1, dfd=res.resDoF))
 
 @coppertop
-def residuals(res:OLSResult, Y:matrix&darray, X:matrix&darray) -> array_:
+def residuals(res:OLSResult, Y:matrix, X:matrix) -> array_:
     return array_((Y - X @ res.betaHat).reshape(Y.shape[0]))
 
 
 @coppertop
-def predictedR2(Y: matrix & darray, X: matrix & darray) -> pytuple:
+def predictedR2(Y: matrix, X: matrix) -> pytuple:
     return _predictedR2(Y, X, {})
 
 @coppertop
-def predictedR2(Y: matrix & darray, X: matrix & darray, options) -> pytuple:
+def predictedR2(Y: matrix, X: matrix, options) -> pytuple:
     return _predictedR2(Y, X, options)
 
-def _predictedR2(Y: matrix & darray, X: matrix & darray, options) -> pytuple:
+def _predictedR2(Y: matrix, X: matrix, options) -> pytuple:
     addIntercept = options.get('addIntercept', False)
     betaHats = []
     errors = []
@@ -175,7 +174,7 @@ def _predictedR2(Y: matrix & darray, X: matrix & darray, options) -> pytuple:
         y, Y_ = Y >> takeRowRemain >> i
         x, X_ = X >> takeRowRemain >> i
         lm = ols(Y_, X_, options)
-        x = ((darray&matrix)(np.ones((1, 1))) >> hjoin >> x) if addIntercept else x
+        x = ((matrix)(np.ones((1, 1))) >> hjoin >> x) if addIntercept else x
         betaHats.append(lm.betaHat)
         yHat = (x @ lm.betaHat)[0]
         errors.append(yHat - y[0])

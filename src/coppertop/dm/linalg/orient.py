@@ -25,7 +25,7 @@ from coppertop.dm.core.types import num, count, offset, matrix, N, darray
 from coppertop.dm.core.aggman import toDiag
 
 a_ = (N**num) & darray
-m_ = matrix & darray
+m_ = matrix
 
 
 @coppertop(style=nullary)

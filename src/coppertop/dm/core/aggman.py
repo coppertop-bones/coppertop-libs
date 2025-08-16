@@ -12,7 +12,7 @@ if hasattr(sys, '_TRACE_IMPORTS') and sys._TRACE_IMPORTS: print(__name__)
 
 
 # manipulation of these aggregation classes:
-# txt, sym, dtup, dstruct, dseq, dmap, tvframe, pylist, pydict, pytup, pyset, nd, (N**num)&darray, matrix&darray
+# txt, sym, dtup, dstruct, dseq, dmap, tvframe, pylist, pydict, pytup, pyset, nd, (N**num)&darray, matrix
 #
 #
 # NOTES
@@ -38,7 +38,6 @@ from coppertop.dm.core.types import pylist, pydict, pytuple, pydict_keys, pydict
 
 
 array_ = (N**num) & darray
-matrix_ = matrix & darray
 
 
 # **********************************************************************************************************************
@@ -186,11 +185,11 @@ def atAllPut(xs:pydict, ks:pylist+pytuple, vs:pylist+pytuple) -> pydict:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def atCol(a: matrix & darray, o:offset) -> matrix & darray:
+def atCol(a: matrix, o:offset) -> matrix:
     return a[:, [o]]
 
 @coppertop(style=binary)
-def atCol(a: matrix & darray, i:index) -> matrix & darray:
+def atCol(a: matrix, i:index) -> matrix:
     return a[:, [i - 1]]
 
 
@@ -417,11 +416,11 @@ def both(a:(T1 ** T2)[dstruct][T3], fn:pyfunc, b:(T4 ** T5)[dstruct][T6]) -> pyl
         >> b._kvs()
 
 @coppertop(style=ternary)
-def both(a: matrix&darray, f, b:matrix&darray) -> matrix&darray:
+def both(a: matrix, f, b:matrix) -> matrix:
     with np.nditer([a, b, None]) as it:
         for x, y, z in it:
             z[...] = f(x,y)
-        return it.operands[2].view(matrix&darray)
+        return it.operands[2].view(matrix)
 
 
 # **********************************************************************************************************************
@@ -429,7 +428,7 @@ def both(a: matrix&darray, f, b:matrix&darray) -> matrix&darray:
 # **********************************************************************************************************************
 
 @coppertop
-def centerCols(panel:matrix&darray) -> matrix&darray:
+def centerCols(panel:matrix) -> matrix:
     return panel - np.mean(panel, 0).reshape((1, panel.shape[1]))
 
 
@@ -525,7 +524,7 @@ def count(x:txt+pylist+pytuple+pyset+pydict_keys+pydict_values) -> t.count:
     return len(x) | t.count
 
 @coppertop
-def count(m:matrix&darray) -> t.count:
+def count(m:matrix) -> t.count:
     nr, nc = m.shape
     return nr | t.count
 
@@ -791,7 +790,7 @@ def dropColRemain(m, i):
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def dropCols(m:matrix&darray, n:t.count):
+def dropCols(m:matrix, n:t.count):
     return m[:,n:]
 
 
@@ -830,7 +829,7 @@ def dropRowRemain(m, i):
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def dropRows(m:matrix&darray, n:t.count):
+def dropRows(m:matrix, n:t.count):
     if n >= 0:
         return m[n:,:]
     else:
@@ -866,7 +865,7 @@ def dropSlots(s:dstruct, names:pylist) -> dstruct:
 # **********************************************************************************************************************
 
 @coppertop
-def eachCol_(m: matrix & darray) -> pylist:
+def eachCol_(m: matrix) -> pylist:
     answer = []
     nr, nc = m.shape
     for i in range(nc):
@@ -880,7 +879,7 @@ def eachCol_(m: matrix & darray) -> pylist:
 # **********************************************************************************************************************
 
 @coppertop
-def eachRow_(m: matrix & darray) -> pylist:
+def eachRow_(m: matrix) -> pylist:
     answer = []
     nr, nc = m.shape
     for i in range(nc):
@@ -940,10 +939,10 @@ def firstLast(x:(N**T1)&darray) -> (N**T1)&darray:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def hjoin(a:darray&matrix, b:darray&matrix) -> darray&matrix:
+def hjoin(a:matrix, b:matrix) -> matrix:
     aShape = a.shape; bShape = b.shape
     if aShape[0] != bShape[0]: raise ValueError('A and B are different heights!')
-    return (darray&matrix)(np.append(a, b, axis=1))
+    return (matrix)(np.append(a, b, axis=1))
 
 
 # **********************************************************************************************************************
@@ -1297,7 +1296,7 @@ def numCols(f: dframe) -> t.count:
     return len(f._keys())
 
 @coppertop
-def numCols(x:matrix&darray) -> t.count:
+def numCols(x:matrix) -> t.count:
     return x.shape[1] | t.count
 
 @coppertop
@@ -1317,7 +1316,7 @@ def numRows(f: dframe) -> t.count:
     return firstCol.shape[0]
 
 @coppertop
-def numRows(x:matrix&darray) -> t.count:
+def numRows(x:matrix) -> t.count:
     return x.shape[0] | t.count
 
 @coppertop
@@ -1416,7 +1415,7 @@ def replace(d:pydict, f:txt, new):
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def scalarProduct(A:matrix&darray, B:matrix&darray) -> num:
+def scalarProduct(A:matrix, B:matrix) -> num:
     return float(np.dot(A, B))
 
 
@@ -1502,7 +1501,7 @@ def setOrder(a, ks):
 # **********************************************************************************************************************
 
 @coppertop
-def shape(x:matrix&darray) -> pytuple:
+def shape(x:matrix) -> pytuple:
     return x.shape
 
 @coppertop
@@ -1534,7 +1533,7 @@ def shift(m:array_, n:t.count) -> array_:
 # **********************************************************************************************************************
 
 @coppertop
-def shuffleColsInPlace(panel:matrix&darray) -> matrix&darray:
+def shuffleColsInPlace(panel:matrix) -> matrix:
     for i in range(panel >> numCols):
         ix = np.arange(panel >> numRows)
         np.random.shuffle(ix)      # destructive
@@ -1694,7 +1693,7 @@ def subsetOf(a, b):
 # **********************************************************************************************************************
 
 @coppertop
-def T(A:matrix&darray) -> matrix&darray:
+def T(A:matrix) -> matrix:
     return A.T
 
 
@@ -1803,7 +1802,7 @@ def take(xs:(N**T1)&darray, c:t.count) -> (N**T1)&darray:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def takeCol(m:matrix&darray, i:offset):
+def takeCol(m:matrix, i:offset):
     return m[:,[i]]
 
 
@@ -1822,7 +1821,7 @@ def takeColRemain(m, i):
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def takeCols(m:matrix&darray, n:t.count) -> matrix&darray:
+def takeCols(m:matrix, n:t.count) -> matrix:
     if n >= 0:
         return m[:,0:n]
     else:
@@ -1834,7 +1833,7 @@ def takeCols(m:matrix&darray, n:t.count) -> matrix&darray:
 # **********************************************************************************************************************
 
 @coppertop
-def takeDiag(m: matrix & darray) -> array_:
+def takeDiag(m: matrix) -> array_:
     return np.diag(m) | array_
 
 
@@ -1872,8 +1871,8 @@ def takeDropUsing(xs:pytuple, f1):
 # **********************************************************************************************************************
 
 @coppertop
-def takePanel(f:dframe) -> matrix&darray:
-    return (matrix&darray)(np.hstack(f >> values))
+def takePanel(f:dframe) -> matrix:
+    return (matrix)(np.hstack(f >> values))
 
 
 # **********************************************************************************************************************
@@ -1892,7 +1891,7 @@ def takeRow(m, i):
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def takeRowRemain(X:matrix&darray, i:offset) -> pytuple:
+def takeRowRemain(X:matrix, i:offset) -> pytuple:
     remain = np.delete(X, i, axis=0)
     take = X[[i],:]
     return take, remain
@@ -1903,7 +1902,7 @@ def takeRowRemain(X:matrix&darray, i:offset) -> pytuple:
 # **********************************************************************************************************************
 
 @coppertop(style=binary)
-def takeRows(m:matrix&darray, n:t.count) -> matrix&darray:
+def takeRows(m:matrix, n:t.count) -> matrix:
     if n >= 0:
         return m[:n, :]
     else:
@@ -1915,8 +1914,8 @@ def takeRows(m:matrix&darray, n:t.count) -> matrix&darray:
 # **********************************************************************************************************************
 
 @coppertop
-def toDiag(m: array_) -> matrix & darray:
-    return (matrix & darray)(np.diag(m))
+def toDiag(m: array_) -> matrix:
+    return (matrix)(np.diag(m))
 
 
 # **********************************************************************************************************************
@@ -2040,7 +2039,7 @@ def withValues(seqOfKey, seqOfValue):
 # **********************************************************************************************************************
 
 @coppertop
-def XTX(x:matrix&darray) -> matrix&darray:
+def XTX(x:matrix) -> matrix:
     return x.T @ x
 
 
@@ -2049,7 +2048,7 @@ def XTX(x:matrix&darray) -> matrix&darray:
 # **********************************************************************************************************************
 
 @coppertop
-def XXT(x:matrix&darray) -> matrix&darray:
+def XXT(x:matrix) -> matrix:
     return x @ x.T
 
 

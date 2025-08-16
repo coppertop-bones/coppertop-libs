@@ -16,70 +16,69 @@ import coppertop.dm.linalg.orient
 
 
 array_ = (N**num)[darray]
-matrix_ = matrix[darray]
 
 
 # NB a 1x1 matrix is assumed to be a scalar, e.g. https://®®en.wikipedia.org/wiki/Dot_product#Algebraic_definition
 
 
 @coppertop
-def inv(A:matrix_) -> matrix_:
+def inv(A:matrix) -> matrix:
     return np.linalg.inv(A)
 
 @coppertop
-def qr(A:matrix_) -> QR:
+def qr(A:matrix) -> QR:
     Q, R = np.linalg.qr(A)            # via householder?
-    q = matrix_(Q) | +orth
-    r = matrix_(R) | +right
+    q = matrix(Q) | +orth
+    r = matrix(R) | +right
     return QR(q, r)
 
 @coppertop
-def cholesky(A:matrix_) -> matrix_&Cholesky:
+def cholesky(A:matrix) -> matrix&Cholesky:
     # use np since in scipy.linalg.cho_factor "The returned matrix also contains random data in the entries not
     # used by the Cholesky decomposition. If you need to zero these entries, use the function cholesky instead."
-    return matrix_(np.linalg.cholesky(A)) | +Cholesky
+    return matrix(np.linalg.cholesky(A)) | +Cholesky
 
 @coppertop
-def svd(A:matrix_) -> SVD:
+def svd(A:matrix) -> SVD:
     u, s, vT = np.linalg.svd(A)
-    return SVD(matrix_(u), array_(s), matrix_(vT))
+    return SVD(matrix(u), array_(s), matrix(vT))
 
 
 
 # https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve_triangular.html
 
 @coppertop(style=binary)
-def solve(U:(upper&matrix_)+(right&matrix_), b:matrix_[T]) -> matrix_:
+def solve(U:(upper&matrix)+(right&matrix), b:matrix[T]) -> matrix:
     """Returns the solution x of Ux = b where U is upper triangular"""
-    return scipy.linalg.solve_triangular(U, b, lower=False).view(darray) | matrix_
+    return scipy.linalg.solve_triangular(U, b, lower=False).view(darray) | matrix
 
 
 @coppertop(style=binary)
-def solve(L:(lower&matrix_)+(left&matrix_), b:matrix_[T]) -> matrix_:
+def solve(L:(lower&matrix)+(left&matrix), b:matrix[T]) -> matrix:
     """Returns the solution x of Lx = b where U is lower triangular"""
-    return scipy.linalg.solve_triangular(L, b, lower=True).view(darray) | matrix_
+    return scipy.linalg.solve_triangular(L, b, lower=True).view(darray) | matrix
 
 
 @coppertop(style=binary)
-def solve(c:Cholesky&matrix, b:matrix_[T]) -> matrix_:
+def solve(c:Cholesky&matrix, b:matrix[T]) -> matrix:
     """Returns the solution x of Ax = b given the Cholesky decomposition of A"""
-    return matrix_(scipy.linalg.cho_solve(c, b))
+    return matrix(scipy.linalg.cho_solve(c, b))
 
 
 @coppertop(style=binary)
-def solve(qr:QR, b:matrix_[T]) -> matrix_:
+def solve(qr:QR, b:matrix[T]) -> matrix:
     """Returns the solution x of Ax = b given a QR decomposition of A"""
-    return scipy.linalg.solve_triangular(qr.r, qr.T @ b, lower=False).view(darray) | matrix_
+    return scipy.linalg.solve_triangular(qr.r, qr.T @ b, lower=False).view(darray) | matrix
 
 
 @coppertop(style=binary)
-def solve(svd:SVD, b:matrix_[T]) -> matrix_:
+def solve(svd:SVD, b:matrix[T]) -> matrix:
     """Returns the solution x of Ax = b given the SVD of A"""
     raise NotYetImplemented()
 
 
 @coppertop
-def pca(panel:matrix&darray):
+def pca(panel:matrix):
     res = svd(panel)
     vor, e, sfv, thetas, sorts = coppertop.dm.linalg.orient.orientEigenvectors(res.vT.T, res.s)
     return vor, res.s

@@ -364,7 +364,7 @@ def take(f:dframe, fields) -> dframe:
 # **********************************************************************************************************************
 
 @coppertop
-def takePanel(f: dframe) -> matrix&darray:
+def takePanel(f: dframe) -> matrix:
     raise NotYetImplemented()
 
 

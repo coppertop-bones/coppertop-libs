@@ -19,11 +19,10 @@ from coppertop.utils import NotYetImplemented
 from bones.ts.metatypes import BType
 from coppertop.dm.core.datetime import toCTimeFormat
 from coppertop.dm.core.types import dframe, dmap, txt, pylist, pydict, T, T1, T2, N, pytuple, pydict_keys, pydict_values, \
-    date, index, num, npfloat, dtup, dseq, matrix, t, darray, btype, py
+    date, index, num, npfloat, dtup, dseq, matrix, t, darray, btype, py, matrix
 
 
 array_ = (N**num)&darray
-matrix_ = matrix&darray
 
 _defaultDateFmt = toCTimeFormat('YYYY.MM.DD')
 
@@ -90,12 +89,12 @@ def to(greg:t.count+index, t:date) -> date:
     return datetime.date.fromordinal(greg)
 
 @coppertop(style=binary)
-# def to(x:pylist, t:matrix&darray) -> matrix&darray:
-def to(x:pylist, t:matrix&darray) -> matrix&darray:
-    return (matrix&darray)(t, x)
+# def to(x:pylist, t:matrix) -> matrix:
+def to(x:pylist, t:matrix) -> matrix:
+    return matrix(x)
 
 @coppertop(style=binary)
-def to(x:matrix&darray, t:array_) -> array_:
+def to(x:matrix, t:array_) -> array_:
     return array_(x.reshape(max(x.shape)))
 
 @coppertop(style=binary)
@@ -128,7 +127,7 @@ def to(xs:pylist, t:(N**date)&darray, f:txt) -> (N**date)&darray:
     return darray((N**date)&darray, [parseDate(x, cFormat) for x in xs])
 
 @coppertop
-def toRow(xs:pylist) -> matrix&darray:
+def toRow(xs:pylist) -> matrix:
     if len(xs) == 0: raise ValueError("can't create an empty matrix")
     if isinstance(xs[0], str):
         raise NotYetImplemented()
@@ -137,11 +136,11 @@ def toRow(xs:pylist) -> matrix&darray:
     return darray((N**date)&darray, [parseDate(x, cFormat) for x in xs])
 
 @coppertop
-def toCol(xs:pylist) -> matrix&darray:
+def toCol(xs:pylist) -> matrix:
     if len(xs) == 0: raise ValueError("can't create an empty matrix")
     if isinstance(xs[0], str):
-        return darray(matrix&darray, [parseNum(x) for x in xs]).reshape(len(xs), 1)
-    return darray(matrix&darray, xs).reshape(len(xs), 1)
+        return darray(matrix, [parseNum(x) for x in xs]).reshape(len(xs), 1)
+    return darray(matrix, xs).reshape(len(xs), 1)
 
 @coppertop(style = binary)
 def withKeys(vs, ks) -> pydict:

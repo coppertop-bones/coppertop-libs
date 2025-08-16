@@ -366,7 +366,6 @@ __all__ += [
 # other
 # **********************************************************************************************************************
 
-
 err = BTAtom('err')             # an error code of some sort
 missing = BTAtom('missing')     # something that isn't there and should be there
 
@@ -382,10 +381,6 @@ __all__ += [
 # **********************************************************************************************************************
 # vec and matrix
 # **********************************************************************************************************************
-
-vec = BType('vec: vec & N**num')
-matrix = BType('matrix: matrix & N**N**num')
-
 
 def create1DTvArray(*args_, **kwargs):
     constr, args = (args_[0][0], args_[1:]) if args_ and isinstance(args_[0], Constructors) else (Missing, args_)
@@ -408,27 +403,47 @@ def create1DTvArray(*args_, **kwargs):
         raise TypeError('x has more than 2 dimensions')
     return answer | t
 
-def create2DTvArray(*args_, **kwargs):
-    constr, args = (args_[0][0], args_[1:]) if args_ and isinstance(args_[0], Constructors) else (Missing, args_)
-    if len(args) == 1:
-        t, x = constr, args[0]
+def _consMatrix(*args_, **kwargs_):
+    constrs, args, kwargs = extractConstructors(args_, kwargs_)
+    if len(args) == 0:
+        raise SyntaxError('Matrix constructor must have at least one argument')
+    elif len(args) == 1:
+        arg = args[0]
+        if isinstance(arg, (list, tuple)) and arg:
+            if isinstance(arg[0], (list, tuple)):
+                # arg is a list of lists
+                return darray(*args_, **kwargs_)
+            else:
+                # matrix( [1,4] ) into a 1x2 matrix
+                return darray(constrs, list(args), **kwargs)
+        else:
+            return darray(constrs, arg, **kwargs)
     else:
-        t, x = args
-    answer = darray(t, x)
-    ndims = len(answer.shape)
-    if ndims == 0:
-        answer.shape = (1, 1)
-    elif ndims == 1:
-        answer.shape = (answer.shape[0], 1)
-    elif ndims > 2:
-        raise TypeError('x has more than 2 dimensions')
-    return answer | t
+        # for convenience let's make matrix([1,4],[2,5],[3,6]) into a 3x2 matrix
+        return darray(constrs, list(args), **kwargs)
+
+    # answer = darray(t, x)
+    # ndims = len(answer.shape)
+    # if ndims == 0:
+    #     answer.shape = (1, 1)
+    # elif ndims == 1:
+    #     answer.shape = (answer.shape[0], 1)
+    # elif ndims > 2:
+    #     raise TypeError('x has more than 2 dimensions')
+    # return answer | t
 
 
 darray = BType('darray: darray & py in mem').setConstructor(_tvarray)
-BType('(N**num) & darray in mem').setConstructor(create1DTvArray)
-BType('vec & darray in mem').setConstructor(create1DTvArray)
-BType('matrix & darray in mem').setConstructor(create2DTvArray)
+vec = BType('vec: vec & (N**num) & darray in mem')      #jones.BTypeError: There are exclusion conflicts within (num, darray)
+# vec = BType('vec: vec & darray in mem')
+# matrix = BType('matrix: matrix & N**N**num')
+matrix = BType('matrix: matrix & (N**N**num) & darray in mem').setConstructor(_consMatrix)          # jones.BTypeError: There are exclusion conflicts within (num, darray)
+# matrix = BType('matrix: matrix & darray in mem').setConstructor(_consMatrix)
+
+
+# BType('(N**num) & darray in mem').setConstructor(create1DTvArray)
+# BType('vec & darray in mem').setConstructor(create1DTvArray)
+# BType('matrix & darray in mem').setConstructor(create2DTvArray)
 
 
 # could make +, -, / and * be type aware by having index, offset, count, etc being familial as well as orthogonal

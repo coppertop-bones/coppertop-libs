@@ -283,8 +283,8 @@ def take(f: polarframe, k: txt) -> polarframe:
 # **********************************************************************************************************************
 
 @coppertop
-def takePanel(f: polarframe) -> matrix&darray:
-    return (matrix&darray)(f.to_numpy())
+def takePanel(f: polarframe) -> matrix:
+    return (matrix)(f.to_numpy())
 
 
 # **********************************************************************************************************************

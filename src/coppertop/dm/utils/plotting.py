@@ -19,10 +19,9 @@ from coppertop.dm.core.conv import to
 
 
 array_ = (N**num)&darray
-matrix_ = matrix&darray
 
 @coppertop
-def scatter(F:matrix_) -> plotnine.ggplot:
+def scatter(F:matrix) -> plotnine.ggplot:
     df = pandaframe({
         'X':  F >> atCol >> 0 >> to >> array_,
         'Y':  F >> atCol >> 1 >> to >> array_,

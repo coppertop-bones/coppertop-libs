@@ -11,7 +11,6 @@ import time, numpy as np
 
 from coppertop.pipe import *
 from coppertop.utils import Missing
-from coppertop.dm.core.structs import darray
 from coppertop.dm.core.types import N, Nn, Nm, num, matrix, count, bool, N1, missing, T1, T2
 from coppertop.dm.linalg.types import colvec, Cholesky, QR, SVD
 from coppertop.dm.linalg.core import solve
@@ -21,7 +20,6 @@ class StopSearch(RuntimeError): pass
 
 
 array_ = (N**num)[darray]
-matrix_ = matrix[darray]
 
 
 
