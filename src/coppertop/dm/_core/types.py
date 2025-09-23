@@ -291,30 +291,31 @@ __all__ += ['date']
 # **********************************************************************************************************************
 
 
-def coercer(t, v):
+def _pyCoercer(t, v):
     tV = typeOf(v)
     try:
         fits = fitsWithin(typeOf(v), t)
     except Exception as ex:
         fits = (tV == t)
     if fits or t == py:
+        v._t = t
         return v
     else:
         raise TypeError(f'Cannot type {type(v)} to {t} - {v}')
 
 
-py = BType('py: atom in mem').setCoercer(coercer)
+py = BType('py: atom in mem').setCoercer(_pyCoercer)
 
 
-pylist = BType('pylist: pylist & py in mem').setCoercer(coercer)
+pylist = BType('pylist: pylist & py in mem').setCoercer(_pyCoercer)
 @coppertop
 def _const_pylist(t:Constructors, x) -> pylist:
     return list(x)
 pylist.setConstructor(_const_pylist)
 
-pytuple = BType('pytuple: pytuple & py in mem').setCoercer(coercer)
+pytuple = BType('pytuple: pytuple & py in mem').setCoercer(_pyCoercer)
 
-pydict = BType('pydict: pydict & py in mem').setCoercer(coercer)
+pydict = BType('pydict: pydict & py in mem').setCoercer(_pyCoercer)
 def _pydictCons(*args_, **kwargs_) -> pydict:
     constrs, args, kwargs = extractConstructors(args_, kwargs_)
     if constrs:
@@ -342,12 +343,12 @@ def _pydictCons(*args_, **kwargs_) -> pydict:
         raise ImpossiblePathError()
 pydict.setConstructor(_pydictCons)
 
-pyset = BType('pyset: pyset & py in mem').setCoercer(coercer)
-npfloat = BType('npfloat: npfloat & py in mem').setCoercer(coercer)
-pydict_keys = BType('pydict_keys: pydict_keys & py in mem').setCoercer(coercer)
-pydict_values = BType('pydict_values: pydict_values & py in mem').setCoercer(coercer)
-pydict_items = BType('pydict_items: pydict_items & py in mem').setCoercer(coercer)
-pyfunc = BType('pyfunc: pyfunc & py in mem').setCoercer(coercer)
+pyset = BType('pyset: pyset & py in mem').setCoercer(_pyCoercer)
+npfloat = BType('npfloat: npfloat & py in mem').setCoercer(_pyCoercer)
+pydict_keys = BType('pydict_keys: pydict_keys & py in mem').setCoercer(_pyCoercer)
+pydict_values = BType('pydict_values: pydict_values & py in mem').setCoercer(_pyCoercer)
+pydict_items = BType('pydict_items: pydict_items & py in mem').setCoercer(_pyCoercer)
+pyfunc = BType('pyfunc: pyfunc & py in mem').setCoercer(_pyCoercer)
 
 pyint = BType('pyint: pyint & py in mem')
 

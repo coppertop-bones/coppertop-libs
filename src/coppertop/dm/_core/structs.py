@@ -31,6 +31,14 @@ __all__ = [
 # _t and _v so appear as boxes.
 
 
+# OPEN:
+# - all construction logic should be in __new__
+# - flesh out the tests
+# - do we make it illegal to construct without a corresponding bones type e.g. _tvseq(BType('dseq: dseq & py in py'), [1,2,3])
+#   is not allowed as it is missing N**T
+# - we may want to have `dseq: dseq & py in py` but only construct `ints: dseq & N**pyint in py`
+# OPEN: use fitsWithin for equality testing?
+
 
 # **********************************************************************************************************************
 # simple types
@@ -59,13 +67,13 @@ class _tvtuple(list):
                 t, v = args
                 instance = super().__new__(cls, v)
                 instance._t = t
-                instance._init(v)
+                instance._super_init(v)
                 return instance
             raise SyntaxError()
         else:
             raise NotYetImplemented()
 
-    def _init(self, v):
+    def _super_init(self, v):
         super().__init__(v)
 
     def __init__(self, *args_, **kwargs_):
@@ -89,6 +97,19 @@ class _tvtuple(list):
 
 
 
+# do we allow _tvstruct( BType('{x:num, y:num}') ) ?
+# in bones we can construct in stages but it requires a runtime check at the end
+# tmp: <:{x:num, y:num}&dstruct>()  // {x:num+missing, y:num+missing}
+# tmp.x: 1                          // {x:litint + num+missing, y:num+missing}
+# tmp.y: a                          // {x:litint + num+missing, y:num+missing}
+# v1: <:{x:num, y:num}> tmp         // {x:num, y:num}        can we coerce here with a runtime type check?
+# actually the litint needs converting to a num (f64) and the struct shrinks from 16 + 16 (floats are 8 bytes so we need to keep the type meta in the prior
+# bytes) to 8 + 8 we can shrink the object from 32 bytes to 16 bytes and conceivably tell the object manager that a slot is now free
+# v1: <:{x:num, y:num}> tmp         // {x:num, y:num}        can we coerce here? with a runtime type check - actually the litint needs convering to a num so copy must happen
+# we can instead do
+# v1: <:{x:num, y:num}>(tmp)        // {x:num, y:num} tmp is garbage
+# v2: <:{x:num, y:num}>(1,2)        // {x:num, y:num}
+
 class _tvstruct:
     __slots__ = ['_pub', '_pvt']
 
@@ -101,11 +122,11 @@ class _tvstruct:
 
         constrs, args, kwargs = extractConstructors(args_, kwargs_)
         if constrs:
-            constr = constrs[0]
+            t = constrs[0]
             if len(args) == 0:
                 # _tvstruct(), _tvstruct(**kwargs)
-                if constr:
-                    super().__getattribute__('_pvt')['_t'] = constr
+                if t:
+                    super().__getattribute__('_pvt')['_t'] = t
                 if kwargs:
                     super().__getattribute__('_pub').update(kwargs)
             elif len(args) == 1:
@@ -118,8 +139,8 @@ class _tvstruct:
                 elif isinstance(arg1, (dict, list, tuple, zip)):
                     # _tvstruct(dictEtc)
                     super().__getattribute__('_pub').update(arg1)
-                    if constr:
-                        super().__getattribute__('_pvt')['_t'] = constr
+                    if t:
+                        super().__getattribute__('_pvt')['_t'] = t
                 else:
                     # _tvstruct(t), _tvstruct(t, **kwargs)
                     super().__getattribute__('_pvt')['_t'] = arg1
@@ -293,51 +314,57 @@ class _tvstruct:
 
 class _tvseq(UserList):
     __slots__ = ['_t', 'data']
+    # OPEN: convert to a subclass of list?
+
+    def __new__(cls, *args_, **kwargs_):
+        constrs, args, kwargs = extractConstructors(args_, kwargs_)
+        if kwargs: raise TypeError('kwargs disallowed')
+        # 4 forms:
+        # _tvseq(t)         e.g. _tvseq( (N**t)[dseq] ) - no elements
+        # _tvseq(t, v)      e.g. _tvseq( (N**t)[dseq], result )
+        # t()               e.g. ((N**t)[dseq])() - no elements
+        # t(v)              e.g. ((N**t)[dseq])( result )
+        if len(args) == 0:
+            if constrs:
+                # t()
+                t = constrs[0]
+                instance = super().__new__(cls)
+                instance._t = t
+                return instance
+            else:
+                raise TypeError('No type specified')
+        elif len(args) == 1:
+            if constrs:
+                # t(v)
+                t, v = constrs[0], args[0]
+                instance = super().__new__(cls)
+                instance._super_init(v)
+                instance._t = t
+                return instance
+            else:
+                # _tvseq(t)
+                t = constrs[0]
+                instance = super().__new__(cls)
+                instance._t = t
+                return instance
+        elif len(args) == 2:
+            if constrs:
+                raise TypeError("Received 2 args and a type but construction must be of form _tvseq(t), _tvseq(t, v), t(), t(v), ")
+            else:
+                # _tvseq(t, v)
+                t, v = args
+                instance = super().__new__(cls)
+                instance._super_init(v)
+                instance._t = t
+                return instance
+        else:
+            raise TypeError("Received more than 2 args but construction must be of form _tvseq(t), _tvseq(t, v), t(), t(v), ")
+
+    def _super_init(self, v):
+        super().__init__(v)
 
     def __init__(self, *args_, **kwargs_):
-        constrs, args, kwargs = extractConstructors(args_, kwargs_)
-        if not constrs:
-            if len(args) == 2:
-                t, v = args
-                super().__init__(v)
-                self._t = t
-            else:
-                raise NotYetImplemented()
-        elif len(constrs) == 1:
-            constr = constrs[0]
-            if len(args) == 1:
-                arg = args[0]
-                if isinstance(arg, _tvseq):
-                    # dseq(dseq)
-                    super().__init__(arg._v)
-                    self._t = arg._t
-                elif isinstance(arg, BType):
-                    # dseq(<BType>)
-                    super().__init__()
-                    self._t = arg
-                else:
-                    raise TypeError("Can't create dseq without type information")
-            elif len(args) == 2:
-                # dseq(t, iterable)
-                arg1, arg2 = args
-                super().__init__(arg2)
-                self._t = arg1
-            elif len(args) == 3:
-                # dseq(dseq, t, iterable)
-                arg1, arg2, arg3 = args
-                assert isinstance(arg1, Constructors)
-                super().__init__(arg3)
-                self._t = arg2
-            else:
-                raise TypeError("Invalid arguments to _tvseq constructor")
-        else:
-            constr = constrs[0]
-            if len(args) == 1:
-                # e.g. dseq([1,2,3])
-                super().__init__(args[0])
-                self._t = constr
-            else:
-                raise NotYetImplemented()
+        pass
 
     @property
     def _v(self):
