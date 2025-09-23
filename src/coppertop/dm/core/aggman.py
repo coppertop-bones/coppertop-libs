@@ -54,7 +54,7 @@ def append(xs:pytuple, x) -> pytuple:
 
 @coppertop(style=binary)
 def append(xs:dseq&(N**T1), x:T1) -> dseq&(N**T1):
-    xs = dseq(xs)
+    xs = xs >> copy
     xs.append(x)
     return xs
 
@@ -73,7 +73,7 @@ def appendTo(x, xs:pytuple) -> pytuple:
 
 @coppertop(style=binary)
 def appendTo(x, xs:dseq&(N**T1)) -> dseq&(N**T1):
-    xs = dseq(xs)
+    xs = xs >> copy
     xs.append(x)
     return xs
 
@@ -505,6 +505,31 @@ def collectV(a:dmap, fn1) -> pylist:
     for v in a._values():
         answer.append(fn1(v))
     return answer
+
+
+# **********************************************************************************************************************
+# copy
+# **********************************************************************************************************************
+
+@coppertop
+def copy(x:dtup&T1) -> dtup&T1:
+    return x._t(x)
+
+@coppertop
+def copy(x:dstruct&T1) -> dstruct&T1:
+    return x._t(x)
+
+@coppertop
+def copy(x:dseq&(N**T1)) -> dseq&(N**T1):
+    return x._t(x)
+
+@coppertop
+def copy(x:dmap&T1) -> dmap&T1:
+    return x._t(x)
+
+@coppertop
+def copy(x:darray&T1) -> darray&T1:
+    return x._t(x)
 
 
 # **********************************************************************************************************************
@@ -1085,8 +1110,8 @@ def join(xs:pylist, ys:pydict_keys) -> pylist:
     return xs + list(ys)
 
 @coppertop(style=binary)
-def join(xs:(N**T1)[dseq], ys:(N**T1)[dseq], tByT) -> (N**T1)[dseq]:
-    return dseq((N**(tByT[T1]))[dseq], xs.data + ys.data)
+def join(xs:(N**T1)[dseq], ys:(N**T1)[dseq]) -> (N**T1)[dseq]:
+    return xs._t(xs._v + ys._v)
 
 
 # **********************************************************************************************************************
@@ -1352,7 +1377,7 @@ def prepend(xs:pytuple, x) -> pytuple:
 
 @coppertop(style=binary)
 def prepend(xs:(N**T1)&dseq, x:T1) -> (N**T1)&dseq:
-    xs = dseq(xs)
+    xs = xs >> copy
     xs.insert(0, x)
     return xs
 
@@ -1371,7 +1396,7 @@ def prependTo(x, xs:pytuple) -> pytuple:
 
 @coppertop(style=binary)
 def prependTo(x:T1, xs:(N**T1)&dseq) -> (N**T1)&dseq:
-    xs = dseq(xs)
+    xs = xs >> copy
     xs.insert(0, x)
     return xs
 

@@ -34,13 +34,12 @@
 
 
 from coppertop.pipe import *
+from coppertop.utils import Missing
 
-import coppertop.dm.pp
 from coppertop.dm.core import drop, startsWith
-import glob, os, shutil, datetime, sys, pathlib, stat
-from coppertop.dm.core.types import txt, bool
-from coppertop.dm.core.types import pylist
-from coppertop.dm.pp import JJ
+import glob, os, shutil, datetime, sys, stat
+from coppertop.dm.core.types import txt, bool, pylist
+from coppertop.dm.pp import JJ, PP
 
 OCTAL_FORMAT = "{0:o}"
 
@@ -51,28 +50,24 @@ class FileNotMovedError(Exception): pass
 if not hasattr(sys, '_moveException'): sys._moveException = []
 
 
-counter = 0
-
+_counter = 0
+_SPACES = \
+'                                                                                                                                                                                                                                                                                      '
 @coppertop
 def XX(x):
-    global counter
-    if counter > 10:
-        counter = 0
-        print(
-            '                                                                                                                                                                                                                                                                                      ',
-            end='\r'
-        )
+    # prints every 10th line
+    global _counter
+    if _counter > 10:
+        _counter = 0
+        print(_SPACES, end='\r')    # carriage return but no newline
         print(x, end='\r')
-    counter += 1
+    _counter += 1
     return x
 
 
 @coppertop
 def XX1(x):
-    print(
-        '                                                                                                                                                                                                                                                                                      ',
-        end='\r'
-    )
+    print(_SPACES, end='\r')        # carriage return but no newline
     print(x, end='\r')
     return x
 
@@ -157,8 +152,13 @@ def deepFindNamedSubfolders(src:txt, folderNames:pylist) -> pylist:
 @coppertop(style=binary)
 def deepMoveFiles(src, dst):
     exceptions = []
+    if src in context.pathsToIgnore:
+        f'ignoring {src}' >> XX1
+        return exceptions
     for p in src >> scanFolders:
-        exceptions.extend(src >> joinPath >> p >> deepMoveFiles >> (dst >> joinPath >> p >> ensureFolderWithXX))
+        srcFolder = src >> joinPath >> p
+        f'moving {srcFolder}' >> XX1
+        exceptions.extend(srcFolder >> deepMoveFiles(_, _, options) >> (dst >> joinPath >> p >> ensureFolderWithXX))
     allFilesMoved = True
     if src >> hasFiles:
         files = src >> scanFiles
@@ -166,12 +166,18 @@ def deepMoveFiles(src, dst):
         for fn in files:
             # did try not moving files starting with ._ - however scrivener uses this too so didn't move properly
             try:
-                src >> joinPath >> fn >> moveFile >> (dst >> joinPath >> fn)
-                fn >> XX
-            except FileNotMovedError as why:
-                f"{why}" >> XX1
-                exceptions.append((src >> joinPath >> fn, why))
+                srcFfn = src >> joinPath >> fn
+                srcFfn >> moveFile >> (dst >> joinPath >> fn)
+                srcFfn >> XX
+            except FileNotMovedError as ex:
+                f"{ex}" >> XX1
+                exceptions.append((src >> joinPath >> fn, ex))
                 allFilesMoved = False
+            except FileNotFoundError as ex:
+                f"{ex}" >> XX1
+                exceptions.append((src >> joinPath >> fn, ex))
+                allFilesMoved = False
+
     if allFilesMoved:
         if src >> isFolderEmpty:
             src >> deleteEmptyFolder
@@ -179,14 +185,35 @@ def deepMoveFiles(src, dst):
 
 
 @coppertop
+def deepScan(root, subfolder):
+    # answer a dict with entries folder->files for all subfolders of the given folder
+    childFiles, childFolders, folder, uilogger = [], [], root >> joinPath >> subfolder, context.uilogger
+    if folder in context.pathsToIgnore:
+        return {}
+    f'Scanning folder {folder}' >> uilogger.info
+    for f in os.scandir(folder):
+        if f.is_dir():
+            childFolders.append(f.name)
+        else:
+            childFiles.append(f.name)
+    if not childFolders and not childFiles:
+        result = {(root, subfolder):Missing}
+    else:
+        result = {(root, subfolder):childFiles}
+        for childFolder in childFolders:
+            result.update(deepScan(root, subfolder >> joinPath >> childFolder))
+    return result
+
+
+@coppertop
 def deleteFile(path):
     try:
         os.remove(path)
-    except PermissionError as why:
+    except PermissionError as ex:
         try:
             path >> macosUnlock
             os.remove(path)
-        except PermissionError as why:
+        except PermissionError as ex:
             raise FileNotMovedError(
                 f"{path >> basename}   - can't delete ({stat.S_IMODE(os.lstat(path).st_mode) >> mask2perm})")
     return path
@@ -297,6 +324,11 @@ def modTime(stats: os.stat_result):
 
 @coppertop(style=binary)
 def moveFile(src, dst):
+    return moveFile(src, dst, False)
+
+
+@coppertop(style=binary)
+def moveFile(src, dst, ignoreDeleteErrors):
     # check that the dst doesn't exist
     if dst >> isFile or dst >> isFolder:
         # check they are the same - same mod time and same size (same hash later on)
@@ -305,29 +337,48 @@ def moveFile(src, dst):
             # already been copied
             pass
         else:
-            raise FileNotMovedError(f"{dst} already exists modtime {'different' if stDst.st_mtime_ns != stSrc.st_mtime_ns else 'same'}, size {'different' if stDst.st_size != stSrc.st_size else 'same'}")
+            raise FileNotMovedError(f"\"{dst}\" already exists modtime {'different' if stDst.st_mtime_ns != stSrc.st_mtime_ns else 'same'}, size {'different' if stDst.st_size != stSrc.st_size else 'same'}")
     else:
-        shutil.copyfile(src, dst, follow_symlinks=True)
+        try:
+            shutil.copyfile(src, dst, follow_symlinks=True)
+        except FileNotFoundError as ex:
+            f'error copying "{src}" - {repr(ex)}' >> PP
+            1/0
     try:
         shutil.copystat(src, dst, follow_symlinks=True)
-    except PermissionError as why:
+    except PermissionError as ex:
         pass
+        # src >> macosUnlock
+        # try:
+        #     shutil.copystat(src, dst, follow_symlinks=True)
+        # except PermissionError as ex:
+        #     pass
     if dst >> isFile:
         # check they are the same - same mod time and same size (same hash later on)
         stSrc, stDst = src >> stats, dst >> stats
         if stDst.st_mtime_ns == stSrc.st_mtime_ns and stDst.st_size == stSrc.st_size:
             try:
                 os.remove(src)
-            except PermissionError as why:
+            except PermissionError as ex:
                 try:
                     src >> macosUnlock
                     os.remove(src)
-                except PermissionError as why:
-                    raise FileNotMovedError(f"{src >> basename}   - copied but can't delete ({stat.S_IMODE(os.lstat(src).st_mode) >> mask2perm})")
+                except PermissionError as ex:
+                    msg = f"\"{src >> basename}\"   - copied but can't delete ({stat.S_IMODE(os.lstat(src).st_mode) >> mask2perm})"
+                    if ignoreDeleteErrors:
+                        print(msg)
+                    else:
+                        raise FileNotMovedError(msg)
+            except OSError as ex:
+                msg = f"\"{src >> basename}\"   - copied but can't delete ({stat.S_IMODE(os.lstat(src).st_mode) >> mask2perm})"
+                if ignoreDeleteErrors:
+                    print(msg)
+                else:
+                    raise FileNotMovedError(msg)
         else:
-            raise FileNotMovedError(f"Destination {dst} doesn't appear to be the one just copied")
+            raise FileNotMovedError(f"Destination \"{dst}\" doesn't appear to be the one just copied")
     else:
-        raise FileNotMovedError(f"Destination {dst} does not exist")
+        raise FileNotMovedError(f"Destination \"{dst}\" does not exist")
     return dst
 
 
@@ -416,3 +467,12 @@ def stats(path: txt):
 @coppertop
 def uid(stats: os.stat_result):
     return stats.st_uid
+
+
+if __name__ == '__main__':
+        NAS_MOUNT = "/Volumes/David/"
+        NAS_ROOT = NAS_MOUNT >> joinPath >> 'd' >> PP;
+
+        HOME = '/Users/david'
+        ROAD_RUNNER = '/Volumes/RoadRunner' >> PP
+        cache_folders = ['.webaxs_L', '.webaxs_3L', '.webaxs_LL', '.webaxs_S', '.webaxs_M', '.thumbnail', '.webview', '._.DS_Store'];

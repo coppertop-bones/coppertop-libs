@@ -64,3 +64,7 @@ def le(a, b) -> bool:
 @coppertop(style=binary)
 def lt(a, b) -> bool:
     return a < b
+
+@coppertop(style=binary)
+def identicalTo(a, b) -> bool:
+    return a is b
